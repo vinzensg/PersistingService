@@ -8,6 +8,7 @@ public class PersistingResource extends LocalResource {
 		super(resourceIdentifier);
 
 		addSubResource(new StringResource("string"));
+		addSubResource(new NumberResource("number"));
 	}
 	
 

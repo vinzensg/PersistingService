@@ -16,6 +16,10 @@ public class PayloadParser {
 		}
 	}
 	
+	public boolean notNull() {
+		return !payloadMap.isEmpty();
+	}
+	
 	public String getValue(String label) {
 		return payloadMap.get(label);
 	}
