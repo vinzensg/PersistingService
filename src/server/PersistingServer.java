@@ -8,6 +8,7 @@ import ch.ethz.inf.vs.californium.endpoint.LocalEndpoint;
 import database.DatabaseConnection;
 
 public class PersistingServer extends LocalEndpoint {
+	// TEST COMMENT
 	
 	public static final int ERR_INIT_FAILED = 1;
 	
