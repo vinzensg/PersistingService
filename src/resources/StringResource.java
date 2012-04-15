@@ -13,6 +13,4 @@ public class StringResource extends TypeResource {
 		addSubResource(new SpecificStringResource(parsedPayload.getValue("resid"), parsedPayload.getValue("deviceuri")));
 	}
 	
-	
-
 }

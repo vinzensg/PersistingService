@@ -24,7 +24,6 @@ public class StringType extends CouchDbDocument {
 	}
 	
 	public String getStringValue() {
-		System.out.println("StingValue: " + stringValue);
 		return this.stringValue;
 	}
 	

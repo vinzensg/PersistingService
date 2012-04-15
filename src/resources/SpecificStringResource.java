@@ -98,7 +98,8 @@ public class SpecificStringResource extends LocalResource {
 	public void performGET(GETRequest request) {
 		String response = "GET request received.\n";
 		
-		List<StringType> result = stringTypeRepository.queryDevice();
+		// List<StringType> result = stringTypeRepository.queryDevice();
+		List<StringType> result = stringTypeRepository.queryDeviceStartDate("2012/04/14 16:37:14");
 		System.out.println("Result: " + result.get(0));
 		System.out.println("Size of Result: " + result.size());
 		for (StringType element : result) {
@@ -108,12 +109,6 @@ public class SpecificStringResource extends LocalResource {
 		}
 		
 		request.respond(CodeRegistry.RESP_CONTENT, response);
-		
-	}
-	
-	public void performPOST(POSTRequest request) {
-		
-		request.respond(CodeRegistry.RESP_CONTENT, "POST request received.");
 	}
 	
 	public void performDELETE(DELETERequest request) {
