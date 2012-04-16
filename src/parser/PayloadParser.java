@@ -20,8 +20,16 @@ public class PayloadParser {
 		return !payloadMap.isEmpty();
 	}
 	
-	public String getValue(String label) {
+	public String getStringValue(String label) {
 		return payloadMap.get(label);
+	}
+	
+	public int getIntValue(String label) {
+		return Integer.valueOf(payloadMap.get(label));
+	}
+	
+	public boolean getBooleanValue(String label) {
+		return Boolean.parseBoolean(payloadMap.get(label));
 	}
 	
 	public boolean hasExactLabels(int num) {
@@ -69,21 +77,22 @@ public class PayloadParser {
 		return false;
 	}
 	
-	
-	
-	/*
-	 * To test class
-	 */
-	public static void main(String[] args) {
-		
-		String testString = "resid = thermostat\n" +
-							"deviceuri = coap://localhost:5683/running/thermostat";
-		
-		
-		PayloadParser pp = new PayloadParser(testString);
-		
-		System.out.println("hasExactLabels: " + pp.containsExactLabels(new String[]{"resid", "deviceuri"}));
-		System.out.println("Resid: " + pp.getValue("resid"));
-		System.out.println("Deviceuri: " + pp.getValue("deviceuri"));
+	public boolean isBoolean(String label) {
+		if (payloadMap.get(label).equals("true") || payloadMap.get(label).equals("false")){
+			return true;
+		} else {
+			return false;
+		}
 	}
+	
+	public boolean isInteger(String label) {
+		char[] num = payloadMap.get(label).toCharArray();
+		for (int i=0; i<num.length; i++) {
+			if (!Character.isDigit(num[i])) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 }
