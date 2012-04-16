@@ -21,40 +21,31 @@ public abstract class TypeResource extends LocalResource {
 	public void performGET(GETRequest request) {
 		String responseString = "The subresources are:\n" +
 								"=====================\n\n";
-		
 		Response response = new Response(CodeRegistry.RESP_CONTENT);
-		
 		Set<Resource> subResources = getSubResources();
-		
 		for (Resource res : subResources) {
 			responseString += res.getName() + "\n";
 		}
-		
 		response.setPayload(responseString);
 		response.setContentType(MediaTypeRegistry.TEXT_PLAIN);
-		
 		request.respond(response);
 	}
 	
 	public void performPOST(POSTRequest request) {
 		String responseString = null;
-		
 		String payload = request.getPayloadString();
-		
 		PayloadParser parsedPayload = new PayloadParser(payload);
-		if (parsedPayload.containsExactLabels(new String[]{"resid", "deviceuri"}) ) {
+		if (parsedPayload.containsLabels(new String[]{"resid", "deviceuri"}) ) {
+			
 			addSubResource(parsedPayload);
-			responseString = "A new subresource was created: " + parsedPayload.getValue("resid") + "\n" +
-							 "For the devide of address: " + parsedPayload.getValue("deviceuri");
+			responseString = "A new subresource was created: " + parsedPayload.getStringValue("resid") + "\n" +
+							 "For the devide of address: " + parsedPayload.getStringValue("deviceuri");
 		} else {
 			responseString = "Creating a new subresource did not work";
 		}
-		
 		Response response = new Response(CodeRegistry.RESP_CONTENT);
-		
 		response.setPayload(responseString);
 		response.setContentType(MediaTypeRegistry.TEXT_PLAIN);
-		
 		request.respond(response);
 	}
 	

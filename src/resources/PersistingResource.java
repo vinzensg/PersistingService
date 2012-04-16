@@ -1,5 +1,7 @@
 package resources;
 
+import resources.number.NumberResource;
+import resources.string.StringResource;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 
 public class PersistingResource extends LocalResource {
