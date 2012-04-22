@@ -1,4 +1,4 @@
-package resources.number;
+package resources;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -51,7 +51,7 @@ public class SpecificNumberResource extends LocalResource {
 		super(resourceIdentifier);
 		setTitle("Resource to sign up for observing a Number value");
 		setResourceType("numbertype");
-		
+				
 		this.resourceIdentifier = resourceIdentifier;
 		this.deviceROOT = deviceROOT;
 		this.deviceRES = deviceRES;
@@ -83,7 +83,11 @@ public class SpecificNumberResource extends LocalResource {
 		addSubResource((timerangeResource = new TimeRangeResource("timerange")));
 	}
 	
-	private void notifyChanged(int value, String date) {
+	public String getDevice() {
+		return this.device;
+	}
+	
+	private void notifyChanged(float value, String date) {
 		allResource.notifyChanged();
 		newestResource.notifyChanged(value);
 		sumResource.notifyChanged(value);
@@ -125,8 +129,9 @@ public class SpecificNumberResource extends LocalResource {
 			System.out.println("OBSERVABLE CHECK: checking for observable on device " + device);
 			
 			String payload = response.getPayloadString();
-			int value = Integer.valueOf(payload);
-			newestResource.notifyChanged(value);
+			System.out.println("PAYLOAD: " + payload);
+			// float value = Float.valueOf(payload);
+			// newestResource.notifyChanged(value);
 						
 			if (response.hasOption(OptionNumberRegistry.OBSERVE)) {
 				System.out.println("OBSERVING: device " + device + " is being observed.");
@@ -160,7 +165,7 @@ public class SpecificNumberResource extends LocalResource {
 			// store in database
 			NumberType.Default numberType = new NumberType.Default();
 			numberType.setDevice(device);
-			int value = Integer.parseInt(payload);
+			float value = Float.valueOf(payload);
 			numberType.setNumberValue(value);
 			DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
 	        Date date = new Date();
@@ -207,7 +212,7 @@ public class SpecificNumberResource extends LocalResource {
 			// store in database
 			NumberType.Default numberType = new NumberType.Default();
 			numberType.setDevice(device);
-			int value = Integer.parseInt(payload);
+			float value = Float.valueOf(payload);
 			numberType.setNumberValue(value);
 			DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
 	        Date date = new Date();
@@ -249,9 +254,9 @@ public class SpecificNumberResource extends LocalResource {
 	
 	public class NewestResource extends LocalResource {
 		
-		int value;
+		float value;
 		
-		public NewestResource(String resourceIdentifer) {
+		public NewestResource(String resourceIdentifier) {
 			super(resourceIdentifier);
 			isObservable(true);
 		}
@@ -263,7 +268,7 @@ public class SpecificNumberResource extends LocalResource {
 			System.out.println("GETRequst NEWEST: (value: " + ret + ") for device " + device);
 		}
 		
-		public void notifyChanged(int value) {
+		public void notifyChanged(float value) {
 			if (this.value != value) {
 				this.value = value;
 				changed();
@@ -289,7 +294,7 @@ public class SpecificNumberResource extends LocalResource {
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
 		}
 		
-		public void notifyChanged(int value) {
+		public void notifyChanged(float value) {
 			if (value != 0)
 				changed();
 		}
@@ -317,15 +322,15 @@ public class SpecificNumberResource extends LocalResource {
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
 		}
 		
-		public void notifyChanged(int value) {
-			if (avg != (float) value)
+		public void notifyChanged(float value) {
+			if (avg != value)
 				changed();
 		}
 	}
 	
 	public class MaxResource extends LocalResource {
 		
-		int max;
+		float max;
 
 		public MaxResource(String resourceIdentifier) {
 			super(resourceIdentifier);
@@ -339,7 +344,7 @@ public class SpecificNumberResource extends LocalResource {
 			if (!resSum.isEmpty()) {
 				ret = "" + resSum.get(0).getMax();
 				System.out.println("RET: " + ret);
-				max = Integer.parseInt(ret);
+				max = Float.valueOf(ret);
 				Integer.valueOf(ret);
 				System.out.println("MAX: " + max);
 				System.out.println("GETRequst MAX: (value: " + ret + ") for device " + device);
@@ -348,7 +353,7 @@ public class SpecificNumberResource extends LocalResource {
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
 		}
 		
-		public void notifyChanged(int value) {
+		public void notifyChanged(float value) {
 			if (value > max)
 				changed();
 		}
@@ -356,7 +361,7 @@ public class SpecificNumberResource extends LocalResource {
 	
 	public class MinResource extends LocalResource {
 		
-		int min;
+		float min;
 
 		public MinResource(String resourceIdentifier) {
 			super(resourceIdentifier);
@@ -369,14 +374,14 @@ public class SpecificNumberResource extends LocalResource {
 			List<NumberType.Min> resSum = numberTypeRepository.queryDeviceMin();
 			if (!resSum.isEmpty()) {
 				ret = "" + resSum.get(0).getMin();
-				min = Integer.parseInt(ret);
+				min = Float.valueOf(ret);
 				System.out.println("GETRequst MIN: (value: " + ret + ") for device " + device);
 			}
 			
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
 		}
 		
-		public void notifyChanged(int value) {
+		public void notifyChanged(float value) {
 			if (value < min)
 				changed();
 		}

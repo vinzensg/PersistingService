@@ -1,11 +1,9 @@
-package resources.string;
+package resources;
 
 import java.util.Set;
 
 import ch.ethz.inf.vs.californium.endpoint.Resource;
 import parser.PayloadParser;
-import resources.TypeResource;
-import resources.number.SpecificNumberResource;
 
 public class StringResource extends TypeResource {
 
@@ -15,7 +13,7 @@ public class StringResource extends TypeResource {
 	
 	@Override
 	protected boolean checkIfAlreadyExists(PayloadParser parsedPayload) {
-String newDevice = parsedPayload.getStringValue("deviceroot") + parsedPayload.getStringValue("deviceuri");
+		String newDevice = parsedPayload.getStringValue("deviceroot") + parsedPayload.getStringValue("deviceres");
 		
 		Set<Resource> subres = this.getSubResources();
 		for (Resource res : subres) {
@@ -30,7 +28,7 @@ String newDevice = parsedPayload.getStringValue("deviceroot") + parsedPayload.ge
 
 	@Override
 	protected void addSubResource(PayloadParser parsedPayload) {
-		addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceROOT"), parsedPayload.getStringValue("deviceuri")));
+		addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceroot"), parsedPayload.getStringValue("deviceres")));
 	}
 	
 }
