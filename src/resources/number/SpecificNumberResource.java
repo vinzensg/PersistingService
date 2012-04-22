@@ -10,110 +10,102 @@ import java.util.TimerTask;
 
 import config.Constants;
 
-import parser.OptionParser;
-
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.DELETERequest;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
 import ch.ethz.inf.vs.californium.coap.MediaTypeRegistry;
+import ch.ethz.inf.vs.californium.coap.Option;
 import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
+import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
+import ch.ethz.inf.vs.californium.coap.ResponseHandler;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 import database.DatabaseConnection;
 import database.type.number.NumberType;
-import database.type.number.NumberTypeAvg;
 import database.type.number.NumberTypeRepository;
-import database.type.number.NumberTypeSum;
+import parser.PayloadParser;
 
 public class SpecificNumberResource extends LocalResource {
+	
+	private NewestResource newestResource;
+	private SumResource sumResource;
+	private AvgResource avgResource;
+	private MaxResource maxResource;
+	private MinResource minResource;
+	private SinceResource sinceResource;
+	private OnDayResource ondayResource;
+	private TimeRangeResource timerangeResource;
 	
 	private String resourceIdentifier;
 	
 	private NumberTypeRepository numberTypeRepository ;
 	
+	private String deviceROOT;
+	private String deviceRES;
+	private String device;
+	
 	private Timer timer;
-
-	public SpecificNumberResource(String resourceIdentifier, String deviceURI, boolean push, String pushtarget, int datainterval) {
+	
+	public SpecificNumberResource(String resourceIdentifier, String deviceROOT, String deviceRES) {
 		super(resourceIdentifier);
 		setTitle("Resource to sign up for observing a Number value");
 		setResourceType("numbertype");
-		this.resourceIdentifier = resourceIdentifier;
-		numberTypeRepository = new NumberTypeRepository(NumberType.class, DatabaseConnection.getCouchDbConnector(), deviceURI);
 		
-		switch(evalMode(push, datainterval)) {
-			case Constants.PUSH_PUSH:
-				System.out.println("PUSH_PUSH");
-				// register for push on device
-				// store in history and push to pushtarget
-				break;
-			case Constants.POLLING_PUSH:
-				System.out.println("POLLING_PUSH");
-				timer = new Timer();
-				timer.schedule(new NumberPollingPushTask(deviceURI, numberTypeRepository, pushtarget), 0, datainterval);
-				// push to pushtarget 
-				break;
-			case Constants.PUSH_STORE:
-				System.out.println("PUSH_STORE");
-				// register for push on device
-				// store in history ONLY
-				break;
-			case Constants.POLLING_STORE:
-				System.out.println("POLLING_STORE");
-				timer = new Timer();
-				timer.schedule(new NumberPollingStoreTask(deviceURI, numberTypeRepository), 0, datainterval);
-				break;
-			default:
-				
-		}
+		this.resourceIdentifier = resourceIdentifier;
+		this.deviceROOT = deviceROOT;
+		this.deviceRES = deviceRES;
+		this.device = deviceROOT + deviceRES;
+		
+		numberTypeRepository = new NumberTypeRepository(NumberType.Default.class, DatabaseConnection.getCouchDbConnector(), device);
+		
+		// check deviceURI for observable & register if possible
+		Request request = new GETRequest();
+		request.setOption(new Option(0, OptionNumberRegistry.OBSERVE));
+		request.registerResponseHandler(new CheckObservableHandler());
+		request.setURI(device);		
+		
+		try {
+			request.prettyPrint();
+			request.execute();
+		} catch (IOException e) {
+			System.err.println("Exception: " + e.getMessage());
+		}		
+		
+		
+		addSubResource((newestResource = new NewestResource("newest")));
+		addSubResource((sumResource = new SumResource("sum")));
+		addSubResource((avgResource = new AvgResource("avg")));
+		addSubResource((maxResource = new MaxResource("max")));
+		addSubResource((minResource = new MinResource("min")));
+		addSubResource((sinceResource = new SinceResource("since")));
+		addSubResource((ondayResource = new OnDayResource("onday")));
+		addSubResource((timerangeResource = new TimeRangeResource("timerange")));
+	}
+	
+	private void notifyChanged(int value, String date) {
+		newestResource.notifyChanged(value);
+		sumResource.notifyChanged(value);
+		avgResource.notifyChanged(value);
+		maxResource.notifyChanged(value);
+		minResource.notifyChanged(value);
+		sinceResource.notifyChanged(date);
+		ondayResource.notifyChanged(date);
+		timerangeResource.notifyChanged(date);
 	}
 
-	public void performGET(GETRequest request) {
-		String response = "GET request received.\n";
-		OptionParser parsedOptions = new OptionParser(request.getOptions(OptionNumberRegistry.URI_QUERY));
-		if (parsedOptions.notNull() && parsedOptions.containsExactLabels(new String[]{"option"})) {
-			String opt = parsedOptions.getValue("option");
-			if (opt.equals("sum")) {
-				System.out.println("Query Sum");
-				List<NumberTypeSum> result = numberTypeRepository.queryDeviceSum();
-				if (result.size() > 0) {
-					System.out.println("Result: " + result.get(0));
-				}
-				System.out.println("Size of Result: " + result.size());
-				for (NumberTypeSum element : result) {
-					response += element.getDevice() + " ";
-					response += element.getSum() + "\n";
-				}
-			} else if (opt.equals("avg")) {
-				System.out.println("Query Avg");
-				List<NumberTypeAvg> result = numberTypeRepository.queryDeviceAvg();
-				if (result.size() > 0) {
-					System.out.println("Result: " + result.get(0));
-				}
-				System.out.println("Size of Result: " + result.size());
-				for (NumberTypeAvg element : result) {
-					response += element.getDevice() + " ";
-					response += element.getAvg() + "\n";
-				}
-			}
-		} else {
-			System.out.println("Query Device");
-			List<NumberType> result = numberTypeRepository.queryDevice();
-			if (result.size() > 0) {
-				System.out.println("Result: " + result.get(0));
-			}
-			System.out.println("Size of Result: " + result.size());
-			for (NumberType element : result) {
-				response += element.getDevice() + " ";
-				response += element.getNumberValue() + " ";
-				response += element.getDateTime() + "\n";
-			}
-		}
-		request.respond(CodeRegistry.RESP_CONTENT, response);
+	// Requests ///////////////////////////////////////////////////////////////
+	
+	public void performGET(GETRequest request) {		
+		String ret = "Target Device: " + device;
+		
+		request.respond(CodeRegistry.RESP_CONTENT, ret);
 	}
 
 	public void performDELETE(DELETERequest request) {
-		timer.cancel();
-		timer.purge();
+		if (timer != null) {
+			timer.cancel();
+			timer.purge();
+		}
 		String responseString = "The Resource " + resourceIdentifier + " has been removed";
 		Response response = new Response(CodeRegistry.RESP_CONTENT);
 		response.setPayload(responseString);
@@ -121,30 +113,370 @@ public class SpecificNumberResource extends LocalResource {
 		request.respond(response);
 		this.remove();
 	}
+		
+	// Handler/ ///////////////////////////////////////////////////////////////
 	
-	private int evalMode(boolean push, int datainterval) {
-		if (push && datainterval <= 0) {
-			// check push mechanism at device
-			boolean devicepush = false;
-			if (devicepush) {
-				return Constants.PUSH_PUSH;
+	public class CheckObservableHandler implements ResponseHandler {
+
+		@Override
+		public void handleResponse(Response response) {
+			System.out.println("OBSERVABLE CHECK: checking for observable on device " + device);
+			
+			String payload = response.getPayloadString();
+			int value = Integer.valueOf(payload);
+			newestResource.notifyChanged(value);
+						
+			if (response.hasOption(OptionNumberRegistry.OBSERVE)) {
+				System.out.println("OBSERVING: device " + device + " is being observed.");
+				Request request = new GETRequest();
+				request.setOption(new Option(0, OptionNumberRegistry.OBSERVE));
+				request.registerResponseHandler(new ObservingHandler());
+				request.setURI(device);
+				
+				try {
+					request.execute();
+				} catch (IOException e) {
+					System.err.println("Exception: " + e.getMessage());
+				}
 			} else {
-				return Constants.POLLING_PUSH;
+				System.out.println("POLLING: device " + device + " is being polled.");
+				timer = new Timer();
+				timer.schedule(new PollingTask(), 0, 5000);
 			}
-		} else if (push && datainterval > 0) {
-			return Constants.POLLING_PUSH;
-		} else if (!push && datainterval <= 0) {
-			// check push mechanism on device
-			boolean devicepush = false;
-			if (devicepush) {
-				return Constants.PUSH_STORE;
-			} else {
-				return Constants.POLLING_STORE;
-			}
-		} else if (!push && datainterval > 0) {
-			return Constants.POLLING_STORE;
+			
+			response.getRequest().unregisterResponseHandler(this);
 		}
-		return Constants.POLLING_STORE;
+	}
+	
+	public class ObservingHandler implements ResponseHandler {
+
+		@Override
+		public void handleResponse(Response response) {
+			String payload = response.getPayloadString();
+			System.out.println("OBSERVING: new data (value: " + payload + ") is being pushed to device " + device);
+			
+			// store in database
+			NumberType.Default numberType = new NumberType.Default();
+			numberType.setDevice(device);
+			int value = Integer.parseInt(payload);
+			numberType.setNumberValue(value);
+			DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+	        Date date = new Date();
+			numberType.setDateTime(dateFormat.format(date));
+			
+			numberTypeRepository.add(numberType);
+			System.out.println("DATABASE: data (value: " + payload + ") was stored for device " + device);
+			
+			notifyChanged(value, dateFormat.format(date));
+			
+			System.out.println("PUSH NOTIFICATION: ...");
+		}
+		
+	}
+	
+	// Polling Task ///////////////////////////////////////////////////////////
+	
+	public class PollingTask extends TimerTask {
+		
+		/*
+		private int oldValue;
+		*/
+
+		@Override
+		public void run() {
+			// getRequest
+			Request getRequest = new GETRequest();
+			getRequest.setURI(device);
+			getRequest.enableResponseQueue(true);
+			
+			try {
+				getRequest.execute();
+			} catch (IOException e) {
+				System.err.println("Exception: " + e.getMessage());
+			}
+			// receive response
+			String payload = null;
+			
+			try {
+				Response response = getRequest.receiveResponse();
+				payload = response.getPayloadString();
+			} catch (InterruptedException e) {
+				System.err.println("Exception: " + e.getMessage());
+			}
+			System.out.println("POLLING: new data (value: " + payload + ") is being pushed to device " + device);
+			
+			
+			// store in database
+			NumberType.Default numberType = new NumberType.Default();
+			numberType.setDevice(device);
+			int value = Integer.parseInt(payload);
+			numberType.setNumberValue(value);
+			DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+	        Date date = new Date();
+			numberType.setDateTime(dateFormat.format(date));
+			
+			numberTypeRepository.add(numberType);
+			System.out.println("DATABASE: data (value: " + payload + ") was stored for device " + device);
+			
+			sumResource.notifyChanged(value);
+			avgResource.notifyChanged(value);
+			maxResource.notifyChanged(value);
+			minResource.notifyChanged(value);
+			sinceResource.notifyChanged(dateFormat.format(date));
+			ondayResource.notifyChanged(dateFormat.format(date));
+			timerangeResource.notifyChanged(dateFormat.format(date));
+			
+			System.out.println("PUSH NOTIFICATION: ...");
+		}
+	}
+	
+	
+	// SubResources ///////////////////////////////////////////////////////////
+	
+	public class NewestResource extends LocalResource {
+		
+		int value;
+		
+		public NewestResource(String resourceIdentifer) {
+			super(resourceIdentifier);
+			isObservable(true);
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = "" + value;
+			request.respond(CodeRegistry.RESP_CONTENT, ret);
+			
+			System.out.println("GETRequst NEWEST: (value: " + ret + ") for device " + device);
+		}
+		
+		public void notifyChanged(int value) {
+			if (this.value != value) {
+				this.value = value;
+				changed();
+			}
+		}
+	}
+	
+	public class SumResource extends LocalResource {
+		
+		public SumResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			List<NumberType.Sum> resSum = numberTypeRepository.queryDeviceSum();
+			if (!resSum.isEmpty()) {
+				ret = "" + resSum.get(0).getSum();
+				System.out.println("GETRequst SUM: (value: " + ret + ") for device " + device);
+			}
+				
+			request.respond(CodeRegistry.RESP_CONTENT, ret);
+		}
+		
+		public void notifyChanged(int value) {
+			if (value != 0)
+				changed();
+		}
+	}
+	
+	public class AvgResource extends LocalResource {
+		
+		float avg;
+
+		public AvgResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+			avg = 0;
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			List<NumberType.Avg> resAvg = numberTypeRepository.queryDeviceAvg();
+			if (!resAvg.isEmpty()) {
+				ret = "" + resAvg.get(0).getAvg();
+				avg = Float.valueOf(ret);
+				System.out.println("GETRequst AVG: (value: " + ret + ") for device " + device);
+			}
+			
+			request.respond(CodeRegistry.RESP_CONTENT, ret);
+		}
+		
+		public void notifyChanged(int value) {
+			if (avg != (float) value)
+				changed();
+		}
+	}
+	
+	public class MaxResource extends LocalResource {
+		
+		int max;
+
+		public MaxResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+			max = 0;
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			List<NumberType.Max> resSum = numberTypeRepository.queryDeviceMax();
+			if (!resSum.isEmpty()) {
+				ret = "" + resSum.get(0).getMax();
+				System.out.println("RET: " + ret);
+				max = Integer.parseInt(ret);
+				Integer.valueOf(ret);
+				System.out.println("MAX: " + max);
+				System.out.println("GETRequst MAX: (value: " + ret + ") for device " + device);
+			}
+			
+			request.respond(CodeRegistry.RESP_CONTENT, ret);
+		}
+		
+		public void notifyChanged(int value) {
+			if (value > max)
+				changed();
+		}
+	}
+	
+	public class MinResource extends LocalResource {
+		
+		int min;
+
+		public MinResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+			min = 0;
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			List<NumberType.Min> resSum = numberTypeRepository.queryDeviceMin();
+			if (!resSum.isEmpty()) {
+				ret = "" + resSum.get(0).getMin();
+				min = Integer.parseInt(ret);
+				System.out.println("GETRequst MIN: (value: " + ret + ") for device " + device);
+			}
+			
+			request.respond(CodeRegistry.RESP_CONTENT, ret);
+		}
+		
+		public void notifyChanged(int value) {
+			if (value < min)
+				changed();
+		}
 	}
 
+	public class SinceResource extends LocalResource {
+		
+		String date;
+		
+		public SinceResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+			date = "";
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
+			if (parsedPayload.containsLabel("date")) {
+				String date = parsedPayload.getStringValue("date");
+				List<NumberType.Default> resSince = numberTypeRepository.queryDeviceSince(date);
+				for (NumberType.Default nt : resSince) {
+					ret += nt.getNumberValue() + "\n";
+				}
+				
+				System.out.println("GETRequst SINCE: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
+				request.respond(CodeRegistry.RESP_CONTENT, ret);
+			} else {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Support:\n" +
+															   "date = " + Constants.DATE_FORMAT);
+			}	
+		}
+		
+		public void notifyChanged(String date) {
+			if (this.date.compareTo(date) < 0)
+				changed();
+		}
+	}
+	
+	public class OnDayResource extends LocalResource {
+		
+		String date;
+		
+		public OnDayResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+			date = "";
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
+			if (parsedPayload.containsLabel("date")) {
+				this.date = parsedPayload.getStringValue("date");
+				String startOnDay = this.date + "-00:00:00";
+				String endOnDay = this.date + "-23:59:59";
+				List<NumberType.Default> resOnDay = numberTypeRepository.queryDeviceRange(startOnDay, endOnDay);
+				for (NumberType.Default nt : resOnDay) {
+					ret += nt.getNumberValue() + "\n";
+				}
+				
+				System.out.println("GETRequst ONDAY: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
+				request.respond(CodeRegistry.RESP_CONTENT, ret);
+			} else {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Support:\n" +
+															   "date = " + Constants.DATE_FORMAT_DAY);
+			}
+		}
+		
+		public void notifyChanged(String date) {
+			if (date.equals(this.date))
+				changed();
+		}
+		
+	}
+	
+	public class TimeRangeResource extends LocalResource {
+		
+		String startDate;
+		String endDate;
+		
+		public TimeRangeResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+			startDate = "";
+			endDate = "";
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
+			if (parsedPayload.containsLabel("startdate") && parsedPayload.containsLabel("enddate")) {
+				this.startDate = parsedPayload.getStringValue("startdate");
+				this.endDate = parsedPayload.getStringValue("enddate");
+				List<NumberType.Default> resTimeRange = numberTypeRepository.queryDeviceRange(this.startDate, this.endDate);
+				for (NumberType.Default nt : resTimeRange) {
+					ret += nt.getNumberValue() + "\n";
+				}
+				
+				System.out.println("GETRequst TIMERANGE: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
+				request.respond(CodeRegistry.RESP_CONTENT, ret);
+			} else {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Support:\n" +
+															   "startdate = " + Constants.DATE_FORMAT + "\n" +
+															   "enddate = " + Constants.DATE_FORMAT);
+			}
+		}
+		
+		public void notifyChanged(String date) {
+			if (startDate.compareTo(date) <= 0 && endDate.compareTo(date) >= 0)
+				changed();
+		}
+	}
 }
