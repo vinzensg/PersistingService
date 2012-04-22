@@ -59,10 +59,9 @@ public class NumberTypeRepository extends CouchDbRepositorySupport<NumberType.De
 	*/
 	
 	public List<NumberType.Default> queryDeviceSince(String date) {
+		ComplexKey keyStart = ComplexKey.of(deviceName, date);
 		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
         Date dateEnd = new Date();
-		System.out.println("since: " + date);
-		ComplexKey keyStart = ComplexKey.of(deviceName, date);
 		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(dateEnd));
 		ViewQuery viewQuery = new ViewQuery().designDocId("_design/number").viewName("device_date").startKey(keyStart).endKey(keyEnd);
 		return DBConnector.queryView(viewQuery, NumberType.Default.class);

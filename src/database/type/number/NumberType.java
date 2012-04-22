@@ -7,7 +7,7 @@ public class NumberType {
 	public static class Default extends CouchDbDocument {
 	
 		private String device;
-		private int numberValue;
+		private float numberValue;
 		private String dateTime;
 		
 		public String getDevice() {
@@ -16,10 +16,10 @@ public class NumberType {
 		public void setDevice(String device) {
 			this.device = device;
 		}
-		public int getNumberValue() {
+		public float getNumberValue() {
 			return numberValue;
 		}
-		public void setNumberValue(int numberValue) {
+		public void setNumberValue(float numberValue) {
 			this.numberValue = numberValue;
 		}
 		public String getDateTime() {
@@ -34,7 +34,7 @@ public class NumberType {
 	public static class Sum extends CouchDbDocument {
 		
 		private String device;
-		private int sum;
+		private float sum;
 		
 		public String getDevice() {
 			return device;
@@ -42,10 +42,10 @@ public class NumberType {
 		public void setDevice(String device) {
 			this.device = device;
 		}
-		public int getSum() {
+		public float getSum() {
 			return sum;
 		}
-		public void setSum(int sum) {
+		public void setSum(float sum) {
 			this.sum = sum;
 		}
 
@@ -81,7 +81,7 @@ public class NumberType {
 	public static class Max extends CouchDbDocument {
 
 		private String device;
-		private int max;
+		private float max;
 		
 		public String getDevice() {
 			return device;
@@ -89,10 +89,10 @@ public class NumberType {
 		public void setDevice(String device) {
 			this.device = device;
 		}
-		public int getMax() {
+		public float getMax() {
 			return max;
 		}
-		public void setMax(int max) {
+		public void setMax(float max) {
 			this.max = max;
 		}
 		
@@ -101,7 +101,7 @@ public class NumberType {
 	public static class Min extends CouchDbDocument {
 
 		private String device;
-		private int min;
+		private float min;
 		
 		public String getDevice() {
 			return device;
@@ -109,10 +109,10 @@ public class NumberType {
 		public void setDevice(String device) {
 			this.device = device;
 		}
-		public int getMin() {
+		public float getMin() {
 			return min;
 		}
-		public void setMin(int min) {
+		public void setMin(float min) {
 			this.min = min;
 		}
 
