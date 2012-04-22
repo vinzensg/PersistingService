@@ -36,11 +36,11 @@ public abstract class TypeResource extends LocalResource {
 		String responseString = null;
 		String payload = request.getPayloadString();
 		PayloadParser parsedPayload = new PayloadParser(payload);
-		if (parsedPayload.containsExactLabels(new String[]{"resid", "deviceroot", "deviceuri"}) ) {
+		if (parsedPayload.containsExactLabels(new String[]{"resid", "deviceroot", "deviceres"}) ) {
 			if (!checkIfAlreadyExists(parsedPayload)) {
 				addSubResource(parsedPayload);
 				responseString = "A new subresource was created: " + parsedPayload.getStringValue("resid") + "\n" +
-								 "For the devide of address: " + parsedPayload.getStringValue("deviceroot") + parsedPayload.getStringValue("deviceuri");
+								 "For the devide of address: " + parsedPayload.getStringValue("deviceroot") + parsedPayload.getStringValue("deviceres");
 			} else {
 				responseString = "Subresource already existed.";
 			}
