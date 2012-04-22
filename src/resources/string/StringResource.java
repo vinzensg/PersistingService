@@ -1,24 +1,36 @@
 package resources.string;
 
+import java.util.Set;
+
+import ch.ethz.inf.vs.californium.endpoint.Resource;
 import parser.PayloadParser;
 import resources.TypeResource;
+import resources.number.SpecificNumberResource;
 
 public class StringResource extends TypeResource {
 
 	public StringResource(String resourceIdentifier) {
 		super(resourceIdentifier);
 	}
+	
+	@Override
+	protected boolean checkIfAlreadyExists(PayloadParser parsedPayload) {
+String newDevice = parsedPayload.getStringValue("deviceroot") + parsedPayload.getStringValue("deviceuri");
+		
+		Set<Resource> subres = this.getSubResources();
+		for (Resource res : subres) {
+			String device = ((SpecificStringResource) res).getDevice();
+			if (device.equals(newDevice)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
 
 	@Override
-	public void addSubResource(PayloadParser parsedPayload) {
-		if (parsedPayload.containsLabels(new String[]{"push", "pushtarget", "datainterval"}) && parsedPayload.isBoolean("push") && parsedPayload.isInteger("datainterval")) {
-			addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceuri"), parsedPayload.getBooleanValue("push"), parsedPayload.getStringValue("pushtarget"), parsedPayload.getIntValue("datainterval")));
-		} else if (parsedPayload.containsLabels(new String[]{"push", "pushtarget"}) && parsedPayload.isBoolean("push")) {
-			addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceuri"), parsedPayload.getBooleanValue("push"), parsedPayload.getStringValue("pushtarget"), 0));
-		} else if (parsedPayload.containsLabel("datainterval") && parsedPayload.isInteger("datainterval")) {
-			addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceuri"), false, null, parsedPayload.getIntValue("datainterval")));
-		} else {
-			addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceuri"), false, null, 0));
-		}	}
+	protected void addSubResource(PayloadParser parsedPayload) {
+		addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceROOT"), parsedPayload.getStringValue("deviceuri")));
+	}
 	
 }
