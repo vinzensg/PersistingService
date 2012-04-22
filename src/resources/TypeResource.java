@@ -32,16 +32,16 @@ public abstract class TypeResource extends LocalResource {
 	}
 	
 	public void performPOST(POSTRequest request) {
+		request.prettyPrint();
 		String responseString = null;
 		String payload = request.getPayloadString();
 		PayloadParser parsedPayload = new PayloadParser(payload);
-		if (parsedPayload.containsLabels(new String[]{"resid", "deviceuri"}) ) {
-			
+		if (parsedPayload.containsExactLabels(new String[]{"resid", "deviceroot", "deviceuri"}) ) {
 			addSubResource(parsedPayload);
 			responseString = "A new subresource was created: " + parsedPayload.getStringValue("resid") + "\n" +
-							 "For the devide of address: " + parsedPayload.getStringValue("deviceuri");
+							 "For the devide of address: " + parsedPayload.getStringValue("deviceroot") + parsedPayload.getStringValue("deviceuri");
 		} else {
-			responseString = "Creating a new subresource did not work";
+			responseString = "Creating a new subresource did not work.";
 		}
 		Response response = new Response(CodeRegistry.RESP_CONTENT);
 		response.setPayload(responseString);
