@@ -1,11 +1,11 @@
-package server;
+package ch.ethz.inf.vs.persistingservice;
 
 import java.net.SocketException;
 
-import resources.PersistingResource;
 
 import ch.ethz.inf.vs.californium.endpoint.LocalEndpoint;
-import database.DatabaseConnection;
+import ch.ethz.inf.vs.persistingservice.database.DatabaseConnection;
+import ch.ethz.inf.vs.persistingservice.resources.PersistingResource;
 
 public class PersistingServer extends LocalEndpoint {
 	

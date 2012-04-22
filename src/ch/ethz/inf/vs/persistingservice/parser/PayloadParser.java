@@ -1,4 +1,4 @@
-package parser;
+package ch.ethz.inf.vs.persistingservice.parser;
 
 import java.util.HashMap;
 

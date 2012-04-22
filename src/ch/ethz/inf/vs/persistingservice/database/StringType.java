@@ -1,4 +1,4 @@
-package database.type.string;
+package ch.ethz.inf.vs.persistingservice.database;
 
 import java.util.Date;
 

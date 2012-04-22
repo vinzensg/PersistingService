@@ -1,8 +1,7 @@
-package resources;
+package ch.ethz.inf.vs.persistingservice.resources;
 
 import java.util.Set;
 
-import parser.PayloadParser;
 
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
@@ -11,6 +10,7 @@ import ch.ethz.inf.vs.californium.coap.POSTRequest;
 import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 import ch.ethz.inf.vs.californium.endpoint.Resource;
+import ch.ethz.inf.vs.persistingservice.parser.PayloadParser;
 
 public abstract class TypeResource extends LocalResource {
 	

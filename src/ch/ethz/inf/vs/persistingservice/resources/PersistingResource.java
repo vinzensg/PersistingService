@@ -1,4 +1,4 @@
-package resources;
+package ch.ethz.inf.vs.persistingservice.resources;
 
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 

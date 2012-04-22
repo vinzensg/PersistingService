@@ -1,4 +1,4 @@
-package resources;
+package ch.ethz.inf.vs.persistingservice.resources;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import config.Constants;
 
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.DELETERequest;
@@ -20,10 +19,11 @@ import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.coap.ResponseHandler;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
-import database.DatabaseConnection;
-import database.type.number.NumberType;
-import database.type.number.NumberTypeRepository;
-import parser.PayloadParser;
+import ch.ethz.inf.vs.persistingservice.config.Constants;
+import ch.ethz.inf.vs.persistingservice.database.DatabaseConnection;
+import ch.ethz.inf.vs.persistingservice.database.NumberType;
+import ch.ethz.inf.vs.persistingservice.database.NumberTypeRepository;
+import ch.ethz.inf.vs.persistingservice.parser.PayloadParser;
 
 public class SpecificNumberResource extends LocalResource {
 	

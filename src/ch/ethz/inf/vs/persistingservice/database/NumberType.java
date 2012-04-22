@@ -1,4 +1,4 @@
-package database.type.number;
+package ch.ethz.inf.vs.persistingservice.database;
 
 import org.ektorp.support.CouchDbDocument;
 

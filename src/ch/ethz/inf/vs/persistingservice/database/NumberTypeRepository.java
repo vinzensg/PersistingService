@@ -1,4 +1,4 @@
-package database.type.number;
+package ch.ethz.inf.vs.persistingservice.database;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -10,7 +10,8 @@ import org.ektorp.CouchDbConnector;
 import org.ektorp.ViewQuery;
 import org.ektorp.support.CouchDbRepositorySupport;
 
-import config.Constants;
+import ch.ethz.inf.vs.persistingservice.config.Constants;
+
 
 public class NumberTypeRepository extends CouchDbRepositorySupport<NumberType.Default> {
 	

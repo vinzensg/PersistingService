@@ -1,4 +1,4 @@
-package config;
+package ch.ethz.inf.vs.persistingservice.config;
 
 public class Constants {
 

@@ -1,4 +1,4 @@
-package database;
+package ch.ethz.inf.vs.persistingservice.database;
 
 import org.ektorp.CouchDbConnector;
 import org.ektorp.CouchDbInstance;

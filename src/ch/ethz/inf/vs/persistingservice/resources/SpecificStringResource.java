@@ -1,4 +1,4 @@
-package resources;
+package ch.ethz.inf.vs.persistingservice.resources;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -8,10 +8,8 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import parser.PayloadParser;
 
 
-import config.Constants;
 
 import ch.ethz.inf.vs.californium.coap.DELETERequest;
 import ch.ethz.inf.vs.californium.coap.MediaTypeRegistry;
@@ -23,10 +21,12 @@ import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
 import ch.ethz.inf.vs.californium.coap.ResponseHandler;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
-import database.DatabaseConnection;
-import database.type.number.NumberType;
-import database.type.string.StringType;
-import database.type.string.StringTypeRepository;
+import ch.ethz.inf.vs.persistingservice.config.Constants;
+import ch.ethz.inf.vs.persistingservice.database.DatabaseConnection;
+import ch.ethz.inf.vs.persistingservice.database.NumberType;
+import ch.ethz.inf.vs.persistingservice.database.StringType;
+import ch.ethz.inf.vs.persistingservice.database.StringTypeRepository;
+import ch.ethz.inf.vs.persistingservice.parser.PayloadParser;
 
 public class SpecificStringResource extends LocalResource {
 	

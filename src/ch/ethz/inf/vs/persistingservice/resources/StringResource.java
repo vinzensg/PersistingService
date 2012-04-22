@@ -1,14 +1,13 @@
-package resources;
+package ch.ethz.inf.vs.persistingservice.resources;
 
 import java.util.Set;
 
 import ch.ethz.inf.vs.californium.endpoint.Resource;
+import ch.ethz.inf.vs.persistingservice.parser.PayloadParser;
 
-import parser.PayloadParser;
+public class StringResource extends TypeResource {
 
-public class NumberResource extends TypeResource {
-	
-	public NumberResource(String resourceIdentifier) {
+	public StringResource(String resourceIdentifier) {
 		super(resourceIdentifier);
 	}
 	
@@ -18,7 +17,7 @@ public class NumberResource extends TypeResource {
 		
 		Set<Resource> subres = this.getSubResources();
 		for (Resource res : subres) {
-			String device = ((SpecificNumberResource) res).getDevice();
+			String device = ((SpecificStringResource) res).getDevice();
 			if (device.equals(newDevice)) {
 				return true;
 			}
@@ -29,6 +28,7 @@ public class NumberResource extends TypeResource {
 
 	@Override
 	protected void addSubResource(PayloadParser parsedPayload) {
-		addSubResource(new SpecificNumberResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceroot"), parsedPayload.getStringValue("deviceres")));
+		addSubResource(new SpecificStringResource(parsedPayload.getStringValue("resid"), parsedPayload.getStringValue("deviceroot"), parsedPayload.getStringValue("deviceres")));
 	}
+	
 }
