@@ -3,7 +3,8 @@ package config;
 public class Constants {
 
 	// Date storage
-	public final static String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
+	public final static String DATE_FORMAT = "yyyy/MM/dd-HH:mm:ss";
+	public final static String DATE_FORMAT_DAY = "yyyy/MM/dd";
 	
 	// Resource modes
 	public final static int PUSH_PUSH = 0; 
