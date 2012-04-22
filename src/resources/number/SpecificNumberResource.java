@@ -27,6 +27,7 @@ import parser.PayloadParser;
 
 public class SpecificNumberResource extends LocalResource {
 	
+	private AllResource allResource;
 	private NewestResource newestResource;
 	private SumResource sumResource;
 	private AvgResource avgResource;
@@ -71,7 +72,7 @@ public class SpecificNumberResource extends LocalResource {
 			System.err.println("Exception: " + e.getMessage());
 		}		
 		
-		
+		addSubResource((allResource = new AllResource("all")));
 		addSubResource((newestResource = new NewestResource("newest")));
 		addSubResource((sumResource = new SumResource("sum")));
 		addSubResource((avgResource = new AvgResource("avg")));
@@ -83,6 +84,7 @@ public class SpecificNumberResource extends LocalResource {
 	}
 	
 	private void notifyChanged(int value, String date) {
+		allResource.notifyChanged();
 		newestResource.notifyChanged(value);
 		sumResource.notifyChanged(value);
 		avgResource.notifyChanged(value);
@@ -177,10 +179,6 @@ public class SpecificNumberResource extends LocalResource {
 	// Polling Task ///////////////////////////////////////////////////////////
 	
 	public class PollingTask extends TimerTask {
-		
-		/*
-		private int oldValue;
-		*/
 
 		@Override
 		public void run() {
@@ -218,13 +216,7 @@ public class SpecificNumberResource extends LocalResource {
 			numberTypeRepository.add(numberType);
 			System.out.println("DATABASE: data (value: " + payload + ") was stored for device " + device);
 			
-			sumResource.notifyChanged(value);
-			avgResource.notifyChanged(value);
-			maxResource.notifyChanged(value);
-			minResource.notifyChanged(value);
-			sinceResource.notifyChanged(dateFormat.format(date));
-			ondayResource.notifyChanged(dateFormat.format(date));
-			timerangeResource.notifyChanged(dateFormat.format(date));
+			notifyChanged(value, dateFormat.format(date));
 			
 			System.out.println("PUSH NOTIFICATION: ...");
 		}
@@ -232,6 +224,28 @@ public class SpecificNumberResource extends LocalResource {
 	
 	
 	// SubResources ///////////////////////////////////////////////////////////
+	
+	public class AllResource extends LocalResource {
+		
+		public AllResource(String resourceIdentifier) {
+			super(resourceIdentifier);
+			isObservable(true);
+		}
+		
+		public void performGET(GETRequest request) {
+			String ret = null;
+			List<NumberType.Default> res = numberTypeRepository.queryDevice();
+			for (NumberType.Default nt : res) {
+				ret += nt.getNumberValue() + "\n";
+			}
+			
+			request.respond(CodeRegistry.RESP_CONTENT, ret);
+		}
+		
+		public void notifyChanged() {
+			changed();
+		}
+	}
 	
 	public class NewestResource extends LocalResource {
 		
