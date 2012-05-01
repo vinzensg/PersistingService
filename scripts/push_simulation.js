@@ -205,7 +205,7 @@ function Value(resid, device, pollingres) {
 				THISValue.coapreq.open("GET", THISValue.device);
 				THISValue.coapreq.send();
 				try {
-					java.lang.Thread.sleep(pollingres.pollres.info);
+					java.lang.Thread.sleep(THISValue.pollingres.pollres.info);
 				} catch (e if e.javaException instanceof InterruptedException) {
 					app.dump("Spleeping was interrupted");
 				}
