@@ -36,13 +36,33 @@ public class OptionParser {
 	}
 	
 	/**
-	 * Gets the value.
+	 * Gets the string value of some label.
 	 *
 	 * @param label the label
-	 * @return the value
+	 * @return the string value stored for the label.
 	 */
-	public String getValue(String label) {
+	public String getStringValue(String label) {
 		return optionMap.get(label);
+	}
+	
+	/**
+	 * Gets the int value of some label
+	 *
+	 * @param label the label
+	 * @return the int value stored for the label.
+	 */
+	public int getIntValue(String label) {
+		return Integer.valueOf(optionMap.get(label));
+	}
+	
+	/**
+	 * Gets the boolean value of some label.
+	 *
+	 * @param label the label
+	 * @return the boolean value stored for the label.
+	 */
+	public boolean getBooleanValue(String label) {
+		return Boolean.parseBoolean(optionMap.get(label));
 	}
 	
 	/**
