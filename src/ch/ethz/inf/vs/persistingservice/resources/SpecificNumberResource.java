@@ -196,7 +196,7 @@ public class SpecificNumberResource extends LocalResource {
 	 */
 	private void notifyChanged(float value, String date) {
 		allResource.notifyChanged(value);
-		newestResource.notifyChanged(value);
+		newestResource.notifyChanged(value, date);
 		lastResource.notifyChanged(value);
 		sinceResource.notifyChanged(date, value);
 		ondayResource.notifyChanged(date, value);
@@ -263,8 +263,9 @@ public class SpecificNumberResource extends LocalResource {
 			System.out.println("OBSERVABLE CHECK: checking for observable on device " + device);
 
 			float value = Float.valueOf(response.getPayloadString());
-			newestResource.notifyChanged(value);
-			lastResource.notifyChanged(value);
+			DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+			Date date = new Date();
+			newestResource.notifyChanged(value, dateFormat.format(date));
 						
 			if (response.hasOption(OptionNumberRegistry.OBSERVE)) {
 				System.out.println("OBSERVING: device " + device + " is being observed.");
@@ -398,6 +399,7 @@ public class SpecificNumberResource extends LocalResource {
 	public class NewestResource extends LocalResource {
 				
 		float value;
+		String date;
 		
 		/**
 		 * Instantiates a new newest resource and makes it observable.
@@ -410,6 +412,7 @@ public class SpecificNumberResource extends LocalResource {
 			isObservable(true);
 			
 			value = 0;
+			date = "";
 		}
 		
 		/**
@@ -419,7 +422,18 @@ public class SpecificNumberResource extends LocalResource {
 			System.out.println("GET INTEGER NEWEST: get request for device " + device);
 			request.prettyPrint();
 			
-			String ret = "" + value;
+			String ret = "";
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
+			
+			boolean withDate = false;
+			if (parsedPayload.containsLabel("withdate"))
+				withDate = parsedPayload.getBooleanValue("withdate");
+			if (withDate) {
+				ret += value + ";" + date;
+			} else {
+				ret += value;
+			}
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
 			
 			System.out.println("GETRequst NEWEST: (value: " + ret + ") for device " + device);
@@ -431,9 +445,10 @@ public class SpecificNumberResource extends LocalResource {
 		 * @param value
 		 *            the newest value
 		 */
-		public void notifyChanged(float value) {
+		public void notifyChanged(float value, String date) {
 			if (this.value != value) {
 				this.value = value;
+				this.date = date;
 				changed();
 			}
 		}
@@ -446,10 +461,10 @@ public class SpecificNumberResource extends LocalResource {
 	 * AllResource is observable for its clients.
 	 * <p>
 	 * It has the subresources:<br>
-	 * sum: returns the sum of all documents stored for the target device<br>
-	 * avg: returns the average of all documents stored for the target device<br>
-	 * max: returns the maximum of all documents stored for the target device<br>
-	 * min: returns the minimum of all documents stored for the target device<br>
+	 * -	<b>sum</b>: returns the sum of all documents stored for the target device<br>
+	 * -	<b>avg</b>: returns the average of all documents stored for the target device<br>
+	 * -	<b>max</b>: returns the maximum of all documents stored for the target device<br>
+	 * -	<b>min</b>: returns the minimum of all documents stored for the target device<br>
 	 * all subresources are observable. 
 	 */
 	public class AllResource extends LocalResource {
@@ -485,9 +500,21 @@ public class SpecificNumberResource extends LocalResource {
 			request.prettyPrint();
 			
 			String ret = "";
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
 			List<NumberType.Default> res = numberTypeRepository.queryDevice();
-			for (NumberType.Default nt : res) {
-				ret += nt.getNumberValue() + "\n";
+			
+			boolean withDate = false;
+			if (parsedPayload.containsLabel("withdate"))
+				withDate = parsedPayload.getBooleanValue("withdate");
+			if (withDate) {
+				for (NumberType.Default nt : res) {
+					ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+				}
+			} else {
+				for (NumberType.Default nt : res) {
+					ret += nt.getNumberValue() + "\n";
+				}
 			}
 			
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
@@ -516,10 +543,10 @@ public class SpecificNumberResource extends LocalResource {
 	 * LastResource is observable for its clients.
 	 * <p>
 	 * It has the subresources:<br>
-	 * sum: returns the sum of the last x documents stored for the target device<br>
-	 * avg: returns the average of the last x documents stored for the target device<br>
-	 * max: returns the maximum of the last x documents stored for the target device<br>
-	 * min: returns the minimum of the last x documents stored for the target device<br>
+	 * -	<b>sum</b>: returns the sum of the last x documents stored for the target device<br>
+	 * -	<b>avg</b>: returns the average of the last x documents stored for the target device<br>
+	 * -	<b>max</b>: returns the maximum of the last x documents stored for the target device<br>
+	 * -	<b>min</b>: returns the minimum of the last x documents stored for the target device<br>
 	 * all subresources are observable.
 	 */
 	public class LastResource extends LocalResource {
@@ -563,9 +590,20 @@ public class SpecificNumberResource extends LocalResource {
 				int limit = parsedPayload.getIntValue("limit");
 				if (limit <= Constants.MAX_LIMIT || limit > 0) {
 					List<NumberType.Default> resLimit = numberTypeRepository.queryDeviceLimit(limit);
-					for (NumberType.Default nt : resLimit) {
-						ret += nt.getNumberValue() + "\n";
+					
+					boolean withDate = false;
+					if (parsedPayload.containsLabel("withdate"))
+						withDate = parsedPayload.getBooleanValue("withdate");
+					if (withDate) {
+						for (NumberType.Default nt : resLimit) {
+							ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+						}
+					} else {
+						for (NumberType.Default nt : resLimit) {
+							ret += nt.getNumberValue() + "\n";
+						}
 					}
+					
 					request.respond(CodeRegistry.RESP_CONTENT, ret);
 				} else {
 					request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide:\n" +
@@ -598,10 +636,10 @@ public class SpecificNumberResource extends LocalResource {
 	 * <p>
 	 * SinceResource is observable for its clients.
 	 * <p>
-	 * sum: returns the sum of all documents stored since *date* for the target device<br>
-	 * avg: returns the average of all documents stored since *date* for the target device<br>
-	 * max: returns the maximum of all documents stored since *date* for the target device<br>
-	 * min: returns the minimum of all documents stored since *date* for the target device<br>
+	 * -	<b>sum</b>: returns the sum of all documents stored since *date* for the target device<br>
+	 * -	<b>avg</b>: returns the average of all documents stored since *date* for the target device<br>
+	 * -	<b>max</b>: returns the maximum of all documents stored since *date* for the target device<br>
+	 * -	<b>min</b>: returns the minimum of all documents stored since *date* for the target device<br>
 	 * all subresources are observable.
 	 */
 	public class SinceResource extends LocalResource {
@@ -636,7 +674,7 @@ public class SpecificNumberResource extends LocalResource {
 		 * this device and responds with their values.
 		 */
 		public void performGET(GETRequest request) {
-			System.out.println("GET INTEGER NEWEST: get request for device " + device);
+			System.out.println("GET INTEGER SINCE: get request for device " + device);
 			request.prettyPrint();
 			
 			String ret = "";
@@ -645,8 +683,18 @@ public class SpecificNumberResource extends LocalResource {
 			if (parsedPayload.containsLabel("date")) {
 				String date = parsedPayload.getStringValue("date");
 				List<NumberType.Default> resSince = numberTypeRepository.queryDeviceSince(date);
-				for (NumberType.Default nt : resSince) {
-					ret += nt.getNumberValue() + "\n";
+				
+				boolean withDate = false;
+				if (parsedPayload.containsLabel("withdate"))
+					withDate = parsedPayload.getBooleanValue("withdate");
+				if (withDate) {
+					for (NumberType.Default nt : resSince) {
+						ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					}
+				} else {
+					for (NumberType.Default nt : resSince) {
+						ret += nt.getNumberValue() + "\n";
+					}
 				}
 				
 				System.out.println("GETRequst SINCE: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
@@ -683,10 +731,10 @@ public class SpecificNumberResource extends LocalResource {
 	 * AllResource is observable for its clients.
 	 * <p>
 	 * It has the subresources:<br>
-	 * sum: returns the sum of all documents stored on *date* for the target device<br>
-	 * avg: returns the average of all documents stored on *date* for the target device<br>
-	 * max: returns the maximum of all documents stored on *date* for the target device<br>
-	 * min: returns the minimum of all documents stored on *date* for the target device<br>
+	 * -	<b>sum</b>: returns the sum of all documents stored on *date* for the target device<br>
+	 * -	<b>avg</b>: returns the average of all documents stored on *date* for the target device<br>
+	 * -	<b>max</b>: returns the maximum of all documents stored on *date* for the target device<br>
+	 * -	<b>min</b>: returns the minimum of all documents stored on *date* for the target device<br>
 	 * All subresources are observable.
 	 */
 	public class OnDayResource extends LocalResource {
@@ -735,8 +783,18 @@ public class SpecificNumberResource extends LocalResource {
 				String startOnDay = this.date + "-00:00:00";
 				String endOnDay = this.date + "-23:59:59";
 				List<NumberType.Default> resOnDay = numberTypeRepository.queryDeviceRange(startOnDay, endOnDay);
-				for (NumberType.Default nt : resOnDay) {
-					ret += nt.getNumberValue() + "\n";
+				
+				boolean withDate = false;
+				if (parsedPayload.containsLabel("withdate"))
+					withDate = parsedPayload.getBooleanValue("withdate");
+				if (withDate) {
+					for (NumberType.Default nt : resOnDay) {
+						ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					}
+				} else {
+					for (NumberType.Default nt : resOnDay) {
+						ret += nt.getNumberValue() + "\n";
+					}
 				}
 				
 				System.out.println("GETRequst ONDAY: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
@@ -774,10 +832,10 @@ public class SpecificNumberResource extends LocalResource {
 	 * TimeRangeResource is observable for its clients.
 	 * <p>
 	 * It has the subresources:<br>
-	 * sum: returns the sum of all documents stored between *startdate* and *enddate* for the target device<br>
-	 * avg: returns the average of all documents stored between *startdate* and *enddate* for the target device<br>
-	 * max: returns the maximum of all documents stored between *startdate* and *enddate* for the target device<br>
-	 * min: returns the minimum of all documents stored between *startdate* and *enddate* for the target device<br>
+	 * -	<b>sum</b>: returns the sum of all documents stored between *startdate* and *enddate* for the target device<br>
+	 * -	<b>avg</b>: returns the average of all documents stored between *startdate* and *enddate* for the target device<br>
+	 * -	<b>max</b>: returns the maximum of all documents stored between *startdate* and *enddate* for the target device<br>
+	 * -	<b>min</b>: returns the minimum of all documents stored between *startdate* and *enddate* for the target device<br>
 	 * All subresources are observable.
 	 */
 	public class TimeRangeResource extends LocalResource {
@@ -829,8 +887,18 @@ public class SpecificNumberResource extends LocalResource {
 				this.startDate = parsedPayload.getStringValue("startdate");
 				this.endDate = parsedPayload.getStringValue("enddate");
 				List<NumberType.Default> resTimeRange = numberTypeRepository.queryDeviceRange(this.startDate, this.endDate);
-				for (NumberType.Default nt : resTimeRange) {
-					ret += nt.getNumberValue() + "\n";
+				
+				boolean withDate = false;
+				if (parsedPayload.containsLabel("withdate"))
+					withDate = parsedPayload.getBooleanValue("withdate");
+				if (withDate) {
+					for (NumberType.Default nt : resTimeRange) {
+						ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					}
+				} else {
+					for (NumberType.Default nt : resTimeRange) {
+						ret += nt.getNumberValue() + "\n";
+					}
 				}
 				
 				System.out.println("GETRequst TIMERANGE: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);

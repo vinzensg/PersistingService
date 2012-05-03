@@ -165,7 +165,7 @@ public class SpecificStringResource extends LocalResource {
 	 */
 	private void notifyChanged(String value, String date) {
 		allResource.notifyChanged();
-		newestResource.notifyChanged(value);
+		newestResource.notifyChanged(value, date);
 		lastResource.notifyChanged();
 		sinceResource.notifyChanged(date);
 		ondayResource.notifyChanged(date);
@@ -232,7 +232,9 @@ public class SpecificStringResource extends LocalResource {
 			System.out.println("OBSERVABLE CHECK: checking for observable on device " + device);
 			
 			String value = response.getPayloadString();
-			newestResource.notifyChanged(value);
+			DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+			Date date = new Date();
+			newestResource.notifyChanged(value, dateFormat.format(date));
 							
 			if (response.hasOption(OptionNumberRegistry.OBSERVE)) {
 				System.out.println("OBSERVING: device " + device + " is being observed.");
@@ -360,6 +362,7 @@ public class SpecificStringResource extends LocalResource {
 	public class NewestResource extends LocalResource {
 
 		String value;
+		String date;
 
 		/**
 		 * Instantiates a new newest resource and makes it observable.
@@ -381,7 +384,18 @@ public class SpecificStringResource extends LocalResource {
 			System.out.println("GET STRING NEWEST: get request for device " + device);
 			request.prettyPrint();
 			
-			String ret = "" + value;
+			String ret = "";
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
+			
+			boolean withDate = false;
+			if (parsedPayload.containsLabel("withdate"))
+				withDate = parsedPayload.getBooleanValue("withdate");
+			if (withDate) {
+				ret += value + ";" + date;
+			} else {
+				ret += value;
+			}
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
 
 			System.out.println("GETRequst NEWEST: (value: " + ret + ") for device " + device);
@@ -393,9 +407,10 @@ public class SpecificStringResource extends LocalResource {
 		 * @param value
 		 *            the newest value
 		 */
-		public void notifyChanged(String value) {
+		public void notifyChanged(String value, String date) {
 			if (!this.value.equals(value)) {
 				this.value = value;
+				this.date = date;
 				changed();
 			}
 		}
@@ -427,11 +442,23 @@ public class SpecificStringResource extends LocalResource {
 		public void performGET(GETRequest request) {
 			System.out.println("GET STRING ALL: get request for device " + device);
 			request.prettyPrint();
-			
+		
 			String ret = "";
+			String payload = request.getPayloadString();
+			PayloadParser parsedPayload = new PayloadParser(payload);
 			List<StringType.Default> res = stringTypeRepository.queryDevice();
-			for (StringType.Default nt : res) {
-				ret += nt.getStringValue() + "\n";
+			
+			boolean withDate = false;
+			if (parsedPayload.containsLabel("withdate"))
+				withDate = parsedPayload.getBooleanValue("withdate");
+			if (withDate) {
+				for (StringType.Default nt : res) {
+					ret += nt.getStringValue() + ";" + nt.getDateTime() + "\n";
+				}
+			} else {
+				for (StringType.Default nt : res) {
+					ret += nt.getStringValue() + "\n";
+				}
 			}
 
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
@@ -481,8 +508,18 @@ public class SpecificStringResource extends LocalResource {
 				int limit = parsedPayload.getIntValue("limit");
 				if (limit <= Constants.MAX_LIMIT || limit > 0) {
 					List<StringType.Default> resLimit = stringTypeRepository.queryDeviceLimit(limit);
-					for (StringType.Default nt : resLimit) {
-						ret += nt.getStringValue() + "\n";
+					
+					boolean withDate = false;
+					if (parsedPayload.containsLabel("withdate"))
+						withDate = parsedPayload.getBooleanValue("withdate");
+					if (withDate) {
+						for (StringType.Default nt : resLimit) {
+							ret += nt.getStringValue() + ";" + nt.getDateTime() + "\n";
+						}
+					} else {
+						for (StringType.Default nt : resLimit) {
+							ret += nt.getStringValue() + "\n";
+						}
 					}
 					request.respond(CodeRegistry.RESP_CONTENT, ret);
 				} else {
@@ -540,8 +577,18 @@ public class SpecificStringResource extends LocalResource {
 			if (parsedPayload.containsLabel("date")) {
 				String date = parsedPayload.getStringValue("date");
 				List<StringType.Default> resSince = stringTypeRepository.queryDeviceSince(date);
-				for (StringType.Default nt : resSince) {
-					ret += nt.getStringValue() + "\n";
+				
+				boolean withDate = false;
+				if (parsedPayload.containsLabel("withdate"))
+					withDate = parsedPayload.getBooleanValue("withdate");
+				if (withDate) {
+					for (StringType.Default nt : resSince) {
+						ret += nt.getStringValue() + ";" + nt.getDateTime() + "\n";
+					}
+				} else {
+					for (StringType.Default nt : resSince) {
+						ret += nt.getStringValue() + "\n";
+					}
 				}
 				
 				System.out.println("GETRequst SINCE: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
@@ -606,10 +653,19 @@ public class SpecificStringResource extends LocalResource {
 				String startOnDay = this.date + "-00:00:00";
 				String endOnDay = this.date + "-23:59:59";
 				List<StringType.Default> resOnDay = stringTypeRepository.queryDeviceRange(startOnDay, endOnDay);
-				for (StringType.Default nt : resOnDay) {
-					ret += nt.getStringValue() + "\n";
-				}
 				
+				boolean withDate = false;
+				if (parsedPayload.containsLabel("withdate"))
+					withDate = parsedPayload.getBooleanValue("withdate");
+				if (withDate) {
+					for (StringType.Default nt : resOnDay) {
+						ret += nt.getStringValue() + ";" + nt.getDateTime() + "\n";
+					}
+				} else {
+					for (StringType.Default nt : resOnDay) {
+						ret += nt.getStringValue() + "\n";
+					}
+				}
 				System.out.println("GETRequst ONDAY: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
 				request.respond(CodeRegistry.RESP_CONTENT, ret);
 			} else {
@@ -675,8 +731,18 @@ public class SpecificStringResource extends LocalResource {
 				this.startDate = parsedPayload.getStringValue("startdate");
 				this.endDate = parsedPayload.getStringValue("enddate");
 				List<StringType.Default> resTimeRange = stringTypeRepository.queryDeviceRange(this.startDate, this.endDate);
-				for (StringType.Default nt : resTimeRange) {
-					ret += nt.getStringValue() + "\n";
+				
+				boolean withDate = false;
+				if (parsedPayload.containsLabel("withdate"))
+					withDate = parsedPayload.getBooleanValue("withdate");
+				if (withDate) {
+					for (StringType.Default nt : resTimeRange) {
+						ret += nt.getStringValue() + ";" + nt.getDateTime() + "\n";
+					}
+				} else {
+					for (StringType.Default nt : resTimeRange) {
+						ret += nt.getStringValue() + "\n";
+					}
 				}
 				
 				System.out.println("GETRequst TIMERANGE: (value: " + ret.substring(0, Math.max(50, ret.length())) + ") for device " + device);
