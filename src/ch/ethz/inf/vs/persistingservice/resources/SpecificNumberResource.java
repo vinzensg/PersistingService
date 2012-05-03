@@ -51,7 +51,7 @@ import ch.ethz.inf.vs.persistingservice.config.Constants;
 import ch.ethz.inf.vs.persistingservice.database.DatabaseConnection;
 import ch.ethz.inf.vs.persistingservice.database.NumberType;
 import ch.ethz.inf.vs.persistingservice.database.NumberTypeRepository;
-import ch.ethz.inf.vs.persistingservice.parser.PayloadParser;
+import ch.ethz.inf.vs.persistingservice.parser.OptionParser;
 
 /**
  * The Class SpecificNumberResource defines a specific number resource, which
@@ -422,13 +422,14 @@ public class SpecificNumberResource extends LocalResource {
 			System.out.println("GET INTEGER NEWEST: get request for device " + device);
 			request.prettyPrint();
 			
+			List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+			OptionParser parsedOptions = new OptionParser(options);
+			
 			String ret = "";
-			String payload = request.getPayloadString();
-			PayloadParser parsedPayload = new PayloadParser(payload);
 			
 			boolean withDate = false;
-			if (parsedPayload.containsLabel("withdate"))
-				withDate = parsedPayload.getBooleanValue("withdate");
+			if (parsedOptions.containsLabel("withdate"))
+				withDate = parsedOptions.getBooleanValue("withdate");
 			if (withDate) {
 				ret += value + ";" + date;
 			} else {
@@ -498,15 +499,17 @@ public class SpecificNumberResource extends LocalResource {
 		public void performGET(GETRequest request) {
 			System.out.println("GET INTEGER ALL: get request for device " + device);
 			request.prettyPrint();
+
+			List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+			OptionParser parsedOptions = new OptionParser(options);
 			
 			String ret = "";
-			String payload = request.getPayloadString();
-			PayloadParser parsedPayload = new PayloadParser(payload);
+
 			List<NumberType.Default> res = numberTypeRepository.queryDevice();
 			
 			boolean withDate = false;
-			if (parsedPayload.containsLabel("withdate"))
-				withDate = parsedPayload.getBooleanValue("withdate");
+			if (parsedOptions.containsLabel("withdate"))
+				withDate = parsedOptions.getBooleanValue("withdate");
 			if (withDate) {
 				for (NumberType.Default nt : res) {
 					ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
@@ -582,18 +585,20 @@ public class SpecificNumberResource extends LocalResource {
 		public void performGET(GETRequest request) {
 			System.out.println("GET INTEGER LAST: get request for device " + device);
 			request.prettyPrint();
+
+			List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+			OptionParser parsedOptions = new OptionParser(options);
 			
 			String ret = "";
-			String payload = request.getPayloadString();
-			PayloadParser parsedPayload = new PayloadParser(payload);
-			if (parsedPayload.containsLabel("limit")) {
-				int limit = parsedPayload.getIntValue("limit");
+
+			if (parsedOptions.containsLabel("limit")) {
+				int limit = parsedOptions.getIntValue("limit");
 				if (limit <= Constants.MAX_LIMIT || limit > 0) {
 					List<NumberType.Default> resLimit = numberTypeRepository.queryDeviceLimit(limit);
 					
 					boolean withDate = false;
-					if (parsedPayload.containsLabel("withdate"))
-						withDate = parsedPayload.getBooleanValue("withdate");
+					if (parsedOptions.containsLabel("withdate"))
+						withDate = parsedOptions.getBooleanValue("withdate");
 					if (withDate) {
 						for (NumberType.Default nt : resLimit) {
 							ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
@@ -676,17 +681,19 @@ public class SpecificNumberResource extends LocalResource {
 		public void performGET(GETRequest request) {
 			System.out.println("GET INTEGER SINCE: get request for device " + device);
 			request.prettyPrint();
+
+			List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+			OptionParser parsedOptions = new OptionParser(options);
 			
 			String ret = "";
-			String payload = request.getPayloadString();
-			PayloadParser parsedPayload = new PayloadParser(payload);
-			if (parsedPayload.containsLabel("date")) {
-				String date = parsedPayload.getStringValue("date");
+
+			if (parsedOptions.containsLabel("date")) {
+				String date = parsedOptions.getStringValue("date");
 				List<NumberType.Default> resSince = numberTypeRepository.queryDeviceSince(date);
 				
 				boolean withDate = false;
-				if (parsedPayload.containsLabel("withdate"))
-					withDate = parsedPayload.getBooleanValue("withdate");
+				if (parsedOptions.containsLabel("withdate"))
+					withDate = parsedOptions.getBooleanValue("withdate");
 				if (withDate) {
 					for (NumberType.Default nt : resSince) {
 						ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
@@ -774,19 +781,21 @@ public class SpecificNumberResource extends LocalResource {
 		public void performGET(GETRequest request) {
 			System.out.println("GET INTEGER ONDAY: get request for device " + device);
 			request.prettyPrint();
+
+			List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+			OptionParser parsedOptions = new OptionParser(options);
 			
 			String ret = "";
-			String payload = request.getPayloadString();
-			PayloadParser parsedPayload = new PayloadParser(payload);
-			if (parsedPayload.containsLabel("date")) {
-				this.date = parsedPayload.getStringValue("date");
+
+			if (parsedOptions.containsLabel("date")) {
+				this.date = parsedOptions.getStringValue("date");
 				String startOnDay = this.date + "-00:00:00";
 				String endOnDay = this.date + "-23:59:59";
 				List<NumberType.Default> resOnDay = numberTypeRepository.queryDeviceRange(startOnDay, endOnDay);
 				
 				boolean withDate = false;
-				if (parsedPayload.containsLabel("withdate"))
-					withDate = parsedPayload.getBooleanValue("withdate");
+				if (parsedOptions.containsLabel("withdate"))
+					withDate = parsedOptions.getBooleanValue("withdate");
 				if (withDate) {
 					for (NumberType.Default nt : resOnDay) {
 						ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
@@ -879,18 +888,20 @@ public class SpecificNumberResource extends LocalResource {
 		public void performGET(GETRequest request) {
 			System.out.println("GET INTEGER TIMERANGE: get request for device " + device);
 			request.prettyPrint();
+
+			List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+			OptionParser parsedOptions = new OptionParser(options);
 			
 			String ret = "";
-			String payload = request.getPayloadString();
-			PayloadParser parsedPayload = new PayloadParser(payload);
-			if (parsedPayload.containsLabel("startdate") && parsedPayload.containsLabel("enddate")) {
-				this.startDate = parsedPayload.getStringValue("startdate");
-				this.endDate = parsedPayload.getStringValue("enddate");
+
+			if (parsedOptions.containsLabel("startdate") && parsedOptions.containsLabel("enddate")) {
+				this.startDate = parsedOptions.getStringValue("startdate");
+				this.endDate = parsedOptions.getStringValue("enddate");
 				List<NumberType.Default> resTimeRange = numberTypeRepository.queryDeviceRange(this.startDate, this.endDate);
 				
 				boolean withDate = false;
-				if (parsedPayload.containsLabel("withdate"))
-					withDate = parsedPayload.getBooleanValue("withdate");
+				if (parsedOptions.containsLabel("withdate"))
+					withDate = parsedOptions.getBooleanValue("withdate");
 				if (withDate) {
 					for (NumberType.Default nt : resTimeRange) {
 						ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
@@ -1024,12 +1035,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER SINCE SUM: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					List<NumberType.DateSum> resSince = numberTypeRepository.queryDeviceSinceSum(date);
 					if (!resSince.isEmpty())
 						ret += resSince.get(0).getSum();
@@ -1054,12 +1067,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER ONDAY SUM: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					String startOnDay = date + "-00:00:00";
 					String endOnDay = date + "-23:59:59";
 					List<NumberType.DateSum> resOnDay = numberTypeRepository.queryDeviceRangeSum(startOnDay, endOnDay);
@@ -1086,13 +1101,15 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER TIMERANGE SUM: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("startdate") && parsedPayload.containsLabel("enddate")) {
-					String startDate = parsedPayload.getStringValue("startdate");
-					String endDate = parsedPayload.getStringValue("enddate");
+
+				if (parsedOptions.containsLabel("startdate") && parsedOptions.containsLabel("enddate")) {
+					String startDate = parsedOptions.getStringValue("startdate");
+					String endDate = parsedOptions.getStringValue("enddate");
 					List<NumberType.DateSum> resTimeRange = numberTypeRepository.queryDeviceRangeSum(startDate, endDate);
 					if (!resTimeRange.isEmpty())
 						ret += resTimeRange.get(0).getSum();
@@ -1118,12 +1135,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER LAST SUM: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("limit")) {
-					int limit = parsedPayload.getIntValue("limit");
+
+				if (parsedOptions.containsLabel("limit")) {
+					int limit = parsedOptions.getIntValue("limit");
 					if (limit <= Constants.MAX_LIMIT || limit > 0) {
 						List<NumberType.Default> resLimit = numberTypeRepository.queryDeviceLimit(limit);
 						if (!resLimit.isEmpty())
@@ -1256,12 +1275,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER SINCE AVG: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					List<NumberType.DateAvg> resSince = numberTypeRepository.queryDeviceSinceAvg(date);
 					if (!resSince.isEmpty())
 						ret += resSince.get(0).getAvg();
@@ -1286,12 +1307,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER ONDAY AVG: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					String startOnDay = date + "-00:00:00";
 					String endOnDay = date + "-23:59:59";
 					List<NumberType.DateAvg> resOnDay = numberTypeRepository.queryDeviceRangeAvg(startOnDay, endOnDay);
@@ -1318,13 +1341,15 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER TIMERANGE AVG: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("startdate") && parsedPayload.containsLabel("enddate")) {
-					String startDate = parsedPayload.getStringValue("startdate");
-					String endDate = parsedPayload.getStringValue("enddate");
+
+				if (parsedOptions.containsLabel("startdate") && parsedOptions.containsLabel("enddate")) {
+					String startDate = parsedOptions.getStringValue("startdate");
+					String endDate = parsedOptions.getStringValue("enddate");
 					List<NumberType.DateAvg> resTimeRange = numberTypeRepository.queryDeviceRangeAvg(startDate, endDate);
 					if (!resTimeRange.isEmpty())
 						ret += resTimeRange.get(0).getAvg();
@@ -1351,11 +1376,13 @@ public class SpecificNumberResource extends LocalResource {
 				System.out.println("GET INTEGER LAST AVG: get request for device " + device);
 				request.prettyPrint();
 				
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
+				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("limit")) {
-					int limit = parsedPayload.getIntValue("limit");
+				
+				if (parsedOptions.containsLabel("limit")) {
+					int limit = parsedOptions.getIntValue("limit");
 					if (limit <= Constants.MAX_LIMIT || limit > 0) {
 						List<NumberType.Default> resLimit = numberTypeRepository.queryDeviceLimit(limit);
 						if (!resLimit.isEmpty())
@@ -1490,12 +1517,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER SINCE MAX: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					List<NumberType.DateMax> resSince = numberTypeRepository.queryDeviceSinceMax(date);
 					if (!resSince.isEmpty())
 						ret += resSince.get(0).getMax();
@@ -1520,12 +1549,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER ONDAY MAX: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					String startOnDay = date + "-00:00:00";
 					String endOnDay = date + "-23:59:59";
 					List<NumberType.DateMax> resOnDay = numberTypeRepository.queryDeviceRangeMax(startOnDay, endOnDay);
@@ -1552,13 +1583,15 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER TIMERANGE MAX: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("startdate") && parsedPayload.containsLabel("enddate")) {
-					String startDate = parsedPayload.getStringValue("startdate");
-					String endDate = parsedPayload.getStringValue("enddate");
+
+				if (parsedOptions.containsLabel("startdate") && parsedOptions.containsLabel("enddate")) {
+					String startDate = parsedOptions.getStringValue("startdate");
+					String endDate = parsedOptions.getStringValue("enddate");
 					List<NumberType.DateMax> resTimeRange = numberTypeRepository.queryDeviceRangeMax(startDate, endDate);
 					if (!resTimeRange.isEmpty())
 						ret += resTimeRange.get(0).getMax();
@@ -1584,12 +1617,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER LAST MAX: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("limit")) {
-					int limit = parsedPayload.getIntValue("limit");
+
+				if (parsedOptions.containsLabel("limit")) {
+					int limit = parsedOptions.getIntValue("limit");
 					if (limit <= Constants.MAX_LIMIT || limit > 0) {
 						List<NumberType.Default> resLimit = numberTypeRepository.queryDeviceLimit(limit);
 						if (!resLimit.isEmpty())
@@ -1723,12 +1758,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER SINCE MIN: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					List<NumberType.DateMin> resSince = numberTypeRepository.queryDeviceSinceMin(date);
 					if (!resSince.isEmpty())
 						ret += resSince.get(0).getMin();
@@ -1754,11 +1791,13 @@ public class SpecificNumberResource extends LocalResource {
 				System.out.println("GET INTEGER SINCE MIN: get request for device " + device);
 				request.prettyPrint();
 				
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
+				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("date")) {
-					String date = parsedPayload.getStringValue("date");
+
+				if (parsedOptions.containsLabel("date")) {
+					String date = parsedOptions.getStringValue("date");
 					String startOnDay = date + "-00:00:00";
 					String endOnDay = date + "-23:59:59";
 					List<NumberType.DateMin> resOnDay = numberTypeRepository.queryDeviceRangeMin(startOnDay, endOnDay);
@@ -1785,13 +1824,15 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER TIMERANGE MIN: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("startdate") && parsedPayload.containsLabel("enddate")) {
-					String startDate = parsedPayload.getStringValue("startdate");
-					String endDate = parsedPayload.getStringValue("enddate");
+
+				if (parsedOptions.containsLabel("startdate") && parsedOptions.containsLabel("enddate")) {
+					String startDate = parsedOptions.getStringValue("startdate");
+					String endDate = parsedOptions.getStringValue("enddate");
 					List<NumberType.DateMin> resTimeRange = numberTypeRepository.queryDeviceRangeMin(startDate, endDate);
 					if (!resTimeRange.isEmpty())
 						ret += resTimeRange.get(0).getMin();
@@ -1817,12 +1858,14 @@ public class SpecificNumberResource extends LocalResource {
 			public void perform(GETRequest request, NumberTypeRepository numberTypeRepository, String device) {
 				System.out.println("GET INTEGER LAST MIN: get request for device " + device);
 				request.prettyPrint();
+
+				List<Option> options = request.getOptions(OptionNumberRegistry.URI_QUERY);
+				OptionParser parsedOptions = new OptionParser(options);
 				
 				String ret = "";
-				String payload = request.getPayloadString();
-				PayloadParser parsedPayload = new PayloadParser(payload);
-				if (parsedPayload.containsLabel("limit")) {
-					int limit = parsedPayload.getIntValue("limit");
+
+				if (parsedOptions.containsLabel("limit")) {
+					int limit = parsedOptions.getIntValue("limit");
 					if (limit <= Constants.MAX_LIMIT || limit > 0) {
 						List<NumberType.Default> resLimit = numberTypeRepository.queryDeviceLimit(limit);
 						if (!resLimit.isEmpty())
