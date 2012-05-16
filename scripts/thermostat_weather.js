@@ -1,6 +1,4 @@
 // Import Packages ////////////////////////////////////
-importPackage(Packages.java.io);
-importPackage(Packages.java.net);
 
 var TODAY = 0;
 var TOMORROW = 1;
@@ -10,6 +8,8 @@ var CITY_CODE = "12893366";
 var THIS = this;
 this.poll = 60*60*60*1000; // every hour
 this.cont = true,
+
+timeout = null;
 
 // Add SubResource /////////////////////////////////////
 
@@ -27,11 +27,12 @@ app.root.addSubResource(THIS.todayres.res);
 app.root.addSubResource(THIS.tomorrowres.res);
 app.root.addSubResource(THIS.astronomyres.res);
 
+
 // Get Weather from Yahoo ///////////////////////////////
 
-new Thread(function() {
-	while(THIS.cont) {
-		try {
+timeout = app.setTimeout(fetchWeatherData, this.pollres.getRawInfo());
+
+function fetchWeatherData() {
 			var rawWeather = "";
 			
 			var url = new URL("http://weather.yahooapis.com/forecastjson?w=" + CITY_CODE + "&u=c");
@@ -46,25 +47,19 @@ new Thread(function() {
 			app.dump(rawWeather);
 			var jsonWeather = eval('(' + rawWeather + ')');
 			
-			THIS.nowres.tempres.info = jsonWeather.condition.temperature;
+			THIS.nowres.tempres.setInfo(jsonWeather.condition.temperature);
 	
-			THIS.todayres.hightempres.info = jsonWeather.forecast[TODAY].high_temperature;
-			THIS.todayres.lowtempres.info = jsonWeather.forecast[TODAY].low_temperature;
+			THIS.todayres.hightempres.setInfo(jsonWeather.forecast[TODAY].high_temperature);
+			THIS.todayres.lowtempres.setInfo(jsonWeather.forecast[TODAY].low_temperature);
 			
-			THIS.tomorrowres.hightempres.info = jsonWeather.forecast[TOMORROW].high_temperature;
-			THIS.tomorrowres.lowtempres.info = jsonWeather.forecast[TOMORROW].low_temperature;
+			THIS.tomorrowres.hightempres.setInfo(jsonWeather.forecast[TOMORROW].high_temperature);
+			THIS.tomorrowres.lowtempres.setInfo(jsonWeather.forecast[TOMORROW].low_temperature);
 			
-			THIS.astronomyres.sunriseres.info = jsonWeather.astronomy.sunrise;
-			THIS.astronomyres.sunsetres.info = jsonWeather.astronomy.sunset;
+			THIS.astronomyres.sunriseres.setInfo(jsonWeather.astronomy.sunrise);
+			THIS.astronomyres.sunsetres.setInfo(jsonWeather.astronomy.sunset);
 			
-			java.lang.Thread.sleep(THIS.pollres.info);
-		} catch (e if e.javaException instanceof IOException) {
-			app.dump("IO Exception occured.");
-		} catch (e if e.javaException instanceof InterruptedException) {
-			app.dump("Spleeping was interrupted.");
-		}
-	}
-}).start();
+			timeout = app.setTimeout(fetchWeatherData, THIS.pollres.getRawInfo());
+}
 
 // Now Resource ///////////////////////////////////////
 
@@ -75,7 +70,7 @@ function NowRes(resid) {
 	
 	this.tempres = new InfoRes("temperature", "0.0");
 	
-	this.res.addSubResource(THISNowRes.tempres.res);
+	this.res.addSubResource(THISNowRes.tempres.res);	
 }
 
 // Day Resource ////////////////////////////////////////
@@ -113,20 +108,29 @@ function InfoRes(resid, info) {
 	
 	this.info = info;
 	
-	this.res = new JavaScriptResource(resid);
-	this.res.isObservable(true);
+	this.prototype.res = new JavaScriptResource(resid);
+	this.prototype.res.isObservable(true);
 	
 	// Requests /////////////////////////////////////////
-	this.res.onget = function(request) {
+	this.prototype.res.onget = function(request) {
 		request.respond(CodeRegistry.RESP_CONTENT, THISInfo.getInfo());
 	}
 	
-	this.getInfo = function() {
+	this.prototype.getInfo = function() {
 		if (THISInfo.info == "" ||ÊTHISInfo.info == 0) {
 			return "EMPTY";
 		} else {
 			return THISInfo.info;
 		}
+	}
+	
+	this.prototype.getRawInfo = function() {
+		return THISInfo.info;
+	}
+	
+	this.prototype.setInfo = function(info) {
+		THISInfo.info = info;
+		THISInfo.prototype.res.changed();
 	}
 }
 
@@ -136,12 +140,15 @@ function ChangeableInfoRes(resid, info) {
 	var THISChangeableInfo_prot = this.prototype;
 	
 	this.info = THISChangeableInfo_prot.info;
-	this.res = THISChangeableInfo_prot.res;
-	this.getInfo = THISChangeableInfo_prot.getInfo
 	
 	THISChangeableInfo.res.onput = function(request) {
 		var payload = parseInt(request.getPayloadString());
-		THISChangeableInfo.info = payload;
+		THISChangeableInfo.setInfo(payload);
 		request.respond(CodeRegistry.RESP_CHANGED);
 	}
+}
+
+app.onunload() {
+	if (timeout)
+		app.clearTimeout(timeout);
 }

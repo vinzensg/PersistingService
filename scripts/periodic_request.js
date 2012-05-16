@@ -352,6 +352,7 @@ function ChangeableInfoRes(resid, info) {
 	
 	THISChangeableInfo.res.onput = function(request) {
 		var payload = parseInt(request.getPayloadString());
+		THISChangeableInfo_prot.info = payload;
 		THISChangeableInfo.info = payload;
 		request.respond(CodeRegistry.RESP_CHANGED);
 	}

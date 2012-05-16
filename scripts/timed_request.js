@@ -1,7 +1,4 @@
 // Import Packages /////////////////////////////////////
-importPackage(Packages.java.text);
-importPackage(Packages.java.util);
-
 var THIS = this;
 
 var DATE_FORMAT = "yyyy/MM/dd-HH:mm:ss";
@@ -54,15 +51,15 @@ function RequestTask(resid, operation, has_payload) {
 		} else {
 			if (has_payload) {
 				request.respond("Provide:\n" +
-							"resid = ...\n" +
-							"device = ...\n" +
-							"datetime = ..." +
-							"(payload = ...\n)");
+								"resid = ...\n" +
+								"device = ...\n" +
+								"datetime = ..." +
+								"(payload = ...\n)");
 			} else {
 				request.respond("Provide:\n" +
-						"resid = ...\n" +
-						"device = ...\n" +
-						"datetime = ...");
+								"resid = ...\n" +
+								"device = ...\n" +
+								"datetime = ...");
 			}
 							
 		}
@@ -80,65 +77,60 @@ function RequestTask(resid, operation, has_payload) {
 function Perform(operation, resid, device, payload, datetime) {
 	var THISPerform = this;
 	
-	this.thread = null;
-	
+	var timeout = null;
+		
 	this.operation = operation;
+	this.device = device;
 	
 	this.res = new JavaScriptResource(resid);
 	
-	this.deviceres = new InfoRes("device", device);
-	this.datetimeres = new InfoRes("datetime", datetime);
-
-	this.res.addSubResource(THISPerform.deviceres.res);
-	this.res.addSubResource(THISPerform.datetimeres.res);
-
-	if (payload != null) {
-		this.payloadres = new InfoRes("payload", payload);
-		this.res.addSubResource(THISPerform.payloadres.res);
-	}
-	
 	// Requests //////////////////////////////////////////
 	this.res.ondelete = function(request) {
-		THISPerform.thread.interrupt();
+		app.clearTimeout(timeout);
 		request.respond(CodeRegistry.RESP_DELETED);
 	}
 	
 	// Functions /////////////////////////////////////////
 	
-	this.run = function() {
-		THISPerform.thread = new Thread(function() {
-			var dateFormat = new SimpleDateFormat(DATE_FORMAT);
-			var date = dateFormat.parse(THISPerform.datetimeres.info);
-			var today = new Date();
-			
-			var calDate = Calendar.getInstance();
-			calDate.setTime(date);
-			var calToday = Calendar.getInstance();
-			calToday.setTime(today);
-			
-			var difference = calDate.getTimeInMillis() - calToday.getTimeInMillis();
-			if (difference > 0) {
-				try {
-					app.dump("Difference: " + difference);
-					java.lang.Thread.sleep(difference);
-					THISPerform.performSend();
-				} catch (e if e.javaException instanceof InterruptedException) {
-					app.dump("Spleeping was interrupted");
-				}
-			}
-			THISPerform.res.remove();
-		});
-		THISPerform.thread.start();
-	}
-	
 	this.performSend = function() {
 		var client = new CoAPRequest();
-		client.open(THISPerform.operation , THISPerform.deviceres.info);
+		client.open(THISPerform.operation , THISPerform.device);
 		if (THISPerform.payloadres) {
 			client.send(THISPerform.payloadres.info);
 		} else {
 			client.send();
 		}
+		THISPerform.res.remove();
+	}
+	
+	// Set Timeout //////////////////////////////////////
+	
+	var dateFormat = new SimpleDateFormat(DATE_FORMAT);
+	var date = dateFormat.parse(datetime);
+	var today = new Date();
+		
+	var calDate = Calendar.getInstance();
+	calDate.setTime(date);
+	var calToday = Calendar.getInstance();
+	calToday.setTime(today);
+		
+	var difference = calDate.getTimeInMillis() - calToday.getTimeInMillis();
+	if (difference > 0) {
+		app.dump("Difference: " + difference);
+		timeout = app.setTimeout(THISPerform.performSend(), difference);
+	}
+	
+	// Add SubResources ////////////////////////////////////
+	
+	this.deviceres = new InfoRes("device", device);
+	this.datetimeres = new DateRes("datetime", datetime, timeout, THISPerform.performSend());
+
+	this.res.addSubResource(THISPerform.deviceres.res);
+	this.res.addSubResource(THISPerform.datetimeres.res);
+
+	if (payload != null) {
+		this.payloadres = new ChangeableInfoRes("payload", payload);
+		this.res.addSubResource(THISPerform.payloadres.res);
 	}
 }
 
@@ -176,7 +168,50 @@ function ChangeableInfoRes(resid, info) {
 	THISChangeableInfo.res.onput = function(request) {
 		var payload = parseInt(request.getPayloadString());
 		THISChangeableInfo.info = payload;
+		THISChangeableInfo_prot.info = payload;
 		request.respond(CodeRegistry.RESP_CHANGED);
+	}
+}
+
+function DateRes(resid, info, timeout, func) {
+	var THISDateRes = this;
+	this.prototype = new InfoRes(resid, info);
+	var THISDateRes_prot = this.prototype;
+	
+	this.timeout = timeout;
+	this.func = func;
+	
+	this.info = THISDateRes_prot.info;
+	this.res = THISDateRes_prot.res;
+	this.getInfo = THISDateRes_prot.getInfo
+	
+	THISChangeableInfo.res.onput = function(request) {
+		var payload = parseInt(request.getPayloadString());
+		THISDateRes.info = payload;
+		THISDateRes_prot.info = payload;
+		
+		updateDate(payload);
+		
+		request.respond(CodeRegistry.RESP_CHANGED);
+	}
+	
+	this.updateDate = function(newDate) {
+		app.clearTimeout(THISDateRes.timeout);
+		
+		var dateFormat = new SimpleDateFormat(DATE_FORMAT);
+		var date = dateFormat.parse(datetime);
+		var today = new Date();
+			
+		var calDate = Calendar.getInstance();
+		calDate.setTime(date);
+		var calToday = Calendar.getInstance();
+		calToday.setTime(today);
+			
+		var difference = calDate.getTimeInMillis() - calToday.getTimeInMillis();
+		if (difference > 0) {
+			app.dump("Difference: " + difference);
+			THISDateRes.timeout = app.setTimeout(THISDateRes.func, difference);
+		}
 	}
 }
 
