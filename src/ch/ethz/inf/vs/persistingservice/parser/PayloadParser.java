@@ -57,8 +57,7 @@ public class PayloadParser {
 		String[] parameters = tmp.split("\n");
 		
 		for (int i = 0; i<parameters.length; i++) {
-			String[] singleParameter = parameters[i].split("=");
-			payloadMap.put(singleParameter[0], singleParameter[1]);
+			payloadMap.put(parameters[i].substring(0, parameters[i].indexOf("=")), parameters[i].substring(parameters[i].indexOf("=") + 1, parameters[i].length()));
 		}
 	}
 	
@@ -147,7 +146,7 @@ public class PayloadParser {
 	 * @param labels the labels
 	 * @return true, if the payload contains the specified labels.
 	 */
-	public boolean containsLabels(String[] labels) {
+	public boolean containsLabels(String... labels) {
 		for (String label : labels) {
 			if (!payloadMap.containsKey(label)) {
 				return false;
@@ -162,7 +161,7 @@ public class PayloadParser {
 	 * @param labels the labels
 	 * @return true, if the payload only holds the specified labels.
 	 */
-	public boolean containsExactLabels(String[] labels) {
+	public boolean containsExactLabels(String... labels) {
 		int counter = 0;
 		
 		for (String label : labels) {

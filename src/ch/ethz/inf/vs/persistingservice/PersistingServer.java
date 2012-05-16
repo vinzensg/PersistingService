@@ -34,7 +34,7 @@ import java.net.SocketException;
 
 import ch.ethz.inf.vs.californium.endpoint.LocalEndpoint;
 import ch.ethz.inf.vs.persistingservice.database.DatabaseConnection;
-import ch.ethz.inf.vs.persistingservice.resources.PersistingResource;
+import ch.ethz.inf.vs.persistingservice.resources.PersistingServiceResource;
 
 /**
  * The Class PersistingServer starts the persisting server and creates and starts a couchdb connection.
@@ -52,7 +52,7 @@ public class PersistingServer extends LocalEndpoint {
 	 * @throws SocketException the socket exception
 	 */
 	public PersistingServer() throws SocketException {
-		addResource(new PersistingResource("persistingservice"));
+		addResource(new PersistingServiceResource("persistingservice"));
 	}
 	
 	/**

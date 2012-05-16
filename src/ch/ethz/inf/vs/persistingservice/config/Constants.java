@@ -44,4 +44,8 @@ public class Constants {
 	// Last Resource
 	public final static int MAX_LIMIT = 1000;
 	
+	
+	// Document Types
+	public enum Types {NUMBER, CHARACTERS};
+	
 }
