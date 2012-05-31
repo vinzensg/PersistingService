@@ -1,376 +1,254 @@
-// Imports ////////////////////////////////////////////////////
-
 var THIS = this;
 
-this.subs = new Array();
+var perform_tasks = new Object();
 
-// Add SubResources ///////////////////////////////////////////
+// Add SubResources ////////////////////////////////////
 
 this.tasksres = new Tasks("tasks");
 
-app.root.addSubResource(this.tasksres.res);
+app.root.add(THIS.tasksres.res);
 
-// Tasks /////////////////////////////////////////////////////
+// Tasks ///////////////////////////////////////////////
 
 function Tasks(resid) {
 	var THISTasks = this;
 	
 	this.res = new JavaScriptResource(resid);
 	
-	// Add SubResources //////////////////////////////////////
-	this.taskspostres = new TasksPost_Put("post", "POST");
-	this.tasksputres = new TasksPost_Put("put", "PUT");
-	this.tasksdeleteres = new TasksDelete("delete", "DELETE");
-	
-	this.res.addSubResource(this.taskspostres.res);
-	this.res.addSubResource(this.tasksputres.res);
-	this.res.addSubResource(this.tasksdeleteres.res);	
-}
-
-function SubTask(resid, operation) {
-	var THISSubTask = this;
-	
-	this.operation = operation;
-		
-	this.res = new JavaScriptResource(resid);
-	
-	// Requests //////////////////////////////////////////
-	
 	this.res.onget = function(request) {
 		var ret = "";
-		for (var i=0, e=THIS.subs.length; i<e; i++) {
-			var sub = THIS.subs[i];
-			app.dump("SUB: " + sub.operation);
-			app.dump("THISSub: " + THISSubTask.operation);
-			if (sub.operation == THISSubTask.operation) {
-				ret += sub.getInfo();
-			}
+		for (var el in perform_tasks) {
+			ret += el + "\n";
 		}
 		request.respond(CodeRegistry.RESP_CONTENT, ret);
 	}
-}
 
-function TasksPost_Put(resid, operation) {
-	var THISTasksPostPut = this;
-	this.prototype = new SubTask(resid, operation);
-	var THISTasksPostPut_prot = this.prototype;
-	
-	this.res = THISTasksPostPut_prot.res;
-	this.operation = THISTasksPostPut_prot.operation;
-	
 	this.res.onpost = function(request) {
+		app.dump("Recieve post");
 		var payload = request.getPayloadString();
 		var pp = new PayloadParser(payload);
-		if (pp.has("resid") && pp.has("device") && pp.has("period")) {
+		if (pp.has("resid") && pp.has("device") && pp.has("operation") && (pp.has("period") || pp.has("periodfunc"))) {
+			var periodfunc = null;
+			if (pp.has("periodfunc")) {
+				periodfunc = pp.get("periodfunc");
+			}
 			var finite = 0;
 			if (pp.has("finite")) {
 				finite = pp.get("finite");
 			}
+			var payload = "";
 			if (pp.has("payload")) {
-				THISTasksPostPut.addRes(pp.get("resid"), pp.get("device"), pp.get("period"), finite, pp.get("payload"), null);
-				request.respond(CodeRegistry.RESP_CREATED);
-			} else if (pp.has("payloadfunc")){
-				THISTasksPostPut.addRes(pp.get("resid"), pp.get("device"), pp.get("period"), finite, "", pp.get("payloadfunc"));
-				request.respond(CodeRegistry.RESP_CREATED);
-			} else {
-				THISTasksPostPut.addRes(pp.get("resid"), pp.get("device"), pp.get("period"), finite, "", null);
-				request.respond(CodeRegistry.RESP_CREATED);
+				payload = pp.get("payload");
 			}
+			var payloadfunc = null;
+			if (pp.has("payloadfunc")) {
+				payloadfunc = pp.get("payloadfunc");
+			}
+			var perform_task = new PerformTask(pp.get("resid"), pp.get("device"), pp.get("operation"), pp.get("period"), periodfunc, finite, payload, payloadfunc);
+			THISTasks.res.add(perform_task.res);
+			request.respond(CodeRegistry.RESP_CREATED);
 		} else {
 			request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide:\n" +
 														   "resid = ...\n" +
 														   "device = ...\n" +
+														   "operation = ...\n" +
 														   "period = ...\n" +
 														   "(finite = ...)\n" +
 														   "(payload = ...)\n" +
 														   "(payloadfunc = ...)");
 		}
 	}
-	
-	// Functions /////////////////////////////////////////
-	
-	this.addRes = function(name, device, period, finite, payload, payloadfunc) {
-		var periodicPostPut = new PeriodicPost_Put(this.operation, name, device, period,finite,  payload, payloadfunc);
-		this.res.addSubResource(periodicPostPut.res);
-		periodicPostPut.run();
-		THIS.subs.push(periodicPostPut);
-	}
 }
-
-function TasksDelete(resid, operation) {
-	var THISTasksDelete = this;
-	this.prototype = new SubTask(resid, operation);
-	var THISTasksDelete_prot = this.prototype;
 	
-	this.res = THISTasksDelete_prot.res;
-	this.operation = THISTasksDelete_prot.operation;
+function PerformTask(resid, device, operation, period, periodfunc, finite, payload, payloadfunc) {
+	var THISPerformTask = this;
 	
-	this.res.onpost = function(request) {
-		var payload = request.getPayloadString();
-		var pp = new PayloadParser(payload);
-		if (pp.has("resid") && pp.has("device") && pp.has("period")) {
-			var finite = 0;
-			if (pp.has("finite")) {
-				finite = pp.get("finite");
-			}
-			THISTasksDelete.addRes(pp.get("resid"), pp.get("device"), pp.get("period"), finite);
-			request.respond(CodeRegistry.RESP_CREATED);
-		} else {
-			request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide:\n" +
-														   "resid = ...\n" +
-														   "device = ...\n" +
-														   "period = ...\n" +
-														   "(finite = ...)");
-		}
-	}
+	this.resid = resid;
 	
-	// Functions /////////////////////////////////////////
-	this.addRes = function(resid, device, period, finite) {
-		var periodicDelete = new PeriodicDelete("DELETE", resid, device, period, finite);
-		this.res.addSubResource(periodicDelete.res);
-		periodicDelete.run();
-		THIS.subs.push(periodicDelete);
-	}
-}
-
-// Periodic Tasks ///////////////////////////////////////////
-
-function Periodic(operation, resid, device, period, finite) {
-	var THISPeriodic = this;
+	perform_tasks[this.resid] = this;
 	
-	this.operation = operation;
+	var timeout = null;
 	
-	this.name = resid;
+	var periodFunc = null;
+	if (periodfunc)
+		periodFunc = getFunc(periodfunc);
 	
-	this.cont = true;
+	var payloadFunc = null;
+	if (payloadfunc)
+		payloadFunc = getFunc(payloadfunc);
 	
 	this.res = new JavaScriptResource(resid);
 	
 	// Add SubResources ////////////////////////////////////
-	
 	this.deviceres = new InfoRes("device", device);
+	this.runningres = new RunRes("running", "true");
+	this.operationres = new InfoRes("operation", operation);
 	this.periodres = new ChangeableInfoRes("period", period);
+	this.periodfuncres = new InfoRes("periodfunc", periodfunc);
 	this.finiteres = new InfoRes("finite", finite);
-	this.remainres = new InfoRes("remain", finite);
-	
-	this.res.addSubResource(THISPeriodic.deviceres.res);
-	this.res.addSubResource(THISPeriodic.periodres.res);
-	this.res.addSubResource(THISPeriodic.finiteres.res);
-	this.res.addSubResource(THISPeriodic.remainres.res);
-	
-	// Requests ////////////////////////////////////////////
-	this.res.onget = function(request) {
-		var ret = "device = " + THISPeriodic.deviceres.getInfo() + "\n" +
-				  "period = " + THISPeriodic.periodres.getInfo() + "\n" +
-				  "finite = " + THISPeriodic.finiteres.getInfo() + "\n" +
-				  "remaining = " + THISPeriodic.remainres.getInfo();
-		request.respond(CodeRegistry.RESP_CONTENT, ret);
-	}
-	
-	this.res.ondelete = function(request) {
-		THISPeriodic.cont = false;
-		request.respond(CodeRegistry.RESP_DELETED);
-		try {
-			java.lang.Thread.sleep(1000);
-		} catch (e if e.javaException instanceof InterruptedException) {
-			app.dump("Sleeping was interrupted");
-		}
-		THIS.subs.pop(this);
-		this.remove();
-	}
-}
-
-function PeriodicPost_Put(operation, resid, device, period, finite, payload, payloadfunc) {
-	var THISPeriodicPostPut = this;
-	this.prototype = new Periodic(operation, resid, device, period, finite);
-	var THISPeriodicPostPut_prot = this.prototype;
-	
-	app.dump(THISPeriodicPostPut_prot.periodres.info);
-		
-	this.res = THISPeriodicPostPut_prot.res;
-	this.operation = THISPeriodicPostPut_prot.operation;
-	
-	// Add SubResources ////////////////////////////////////
-	this.payloadres = new InfoRes("payload", payload);
+	this.remainingres = new InfoRes("remaining", finite);
+	this.payloadres = new ChangeableInfoRes("payload", payload);
 	this.payloadfuncres = new InfoRes("payloadfunc", payloadfunc);
 	
-	this.res.addSubResource(this.payloadres.res);
-	this.res.addSubResource(this.payloadfuncres.res);
+	this.res.add(THISPerformTask.deviceres.res);
+	this.res.add(THISPerformTask.runningres.res);
+	this.res.add(THISPerformTask.operationres.res);
+	this.res.add(THISPerformTask.periodres.res);
+	this.res.add(THISPerformTask.periodfuncres.res);
+	this.res.add(THISPerformTask.finiteres.res);
+	this.res.add(THISPerformTask.remainingres.res);
+	this.res.add(THISPerformTask.payloadres.res);
+	this.res.add(THISPerformTask.payloadfuncres.res);
 	
-	// Set Real Payload Function ///////////////////////////
-	
-	if (payloadfunc != null) {
-		this.payloadfunc = getFunc(payloadfunc);
+	// Start Perform Task /////////////////////////////////
+	if (finite > 0) {
+		performRequest(finite - 1);
 	} else {
-		this.payloadfunc = new EmptyFunc();
+		performRequest(-1);
 	}
 	
-	// Requests ////////////////////////////////////////////
-	this.res.onget = function(request) {
-		var ret = "device = " + THISPeriodicPostPut_prot.deviceres.getInfo() + "\n" +
-				  "period = " + THISPeriodicPostPut_prot.periodres.getInfo() + "\n" +
-				  "finite = " + THISPeriodicPostPut_prot.finiteres.getInfo() + "\n" +
-				  "remaining = " + THISPeriodicPostPut_prot.remainres.getInfo() + "\n" +
-				  "payload = " + THISPeriodicPostPut_prot.payloadres.getInfo() + "\n" +
-				  "payloadfunc = " + THISPeriodicPostPut.payloadfunc.getStats();
-		request.respond(CodeRegistry.RESP_CONTENT, ret);
-	}
-	
-	// Functions //////////////////////////////////////////
-	this.run = function() {
-		if (THISPeriodicPostPut_prot.finiteres.info > 0) {
-			new Thread(function() {
-				var cycles = THISPeriodicPostPut_prot.finiteres.info;
-				while(cycles > 0) {
-					loop();
-					cycles--;
-					THISPeriodicPostPut_prot.remainres.info--;
-				}
-				THISPeriodicPost.res.remove();
-			}).start();
-		} else {
-			new Thread(function() {
-				var cont = true;
-				while(THISPeriodicPostPut_prot.cont) {
-					loop();
-				}
-			}).start();
-		}
-	}
-	
-	var loop = function() {
-		app.dump("Perform Periodic Task");
+	function performRequest(remaining) {
+		app.dump("Perform Request");
 		var coapreq = new CoAPRequest();
-		coapreq.open(THISPeriodicPostPut_prot.operation, THISPeriodicPostPut_prot.deviceres.info);
-		if (payloadfunc != null) {
-			coapreq.send(THISPeriodicPostPut.payloadfunc.perform());
+		coapreq.open(THISPerformTask.operationres.getInfo(), THISPerformTask.deviceres.getInfo());
+		if (payloadFunc!=null) {
+			coapreq.send(payloadFunc.perform());
 		} else {
-			coapreq.send(THISPeriodicPostPut_prot.payloadres.info);
+			coapreq.send(THISPerformTask.payloadres.getInfo());
 		}
-		
-		try {
-			java.lang.Thread.sleep(THISPeriodicPostPut_prot.periodres.info);
-		} catch (e if e.javaException instanceof InterruptedException) {
-			app.dump("Spleeping was interrupted");
-		}
-	}
-	
-	this.getInfo = function() {
-		return THISPeriodicPostPut_prot.operation + ": " +
-				"name = " + THISPeriodicPostPut_prot.name + "; " +
-				"device = " + THISPeriodicPostPut_prot.deviceres.getInfo() + "; " +
-				"period = " + THISPeriodicPostPut_prot.periodres.getInfo() + "; " +
-				"finite = " + THISPeriodicPostPut_prot.finiteres.getInfo() + "; " +
-				"payload = " + THISPeriodicPostPut.payloadres.getInfo() + "; " +
-				"payloadfunc = " + THISPeriodicPostPut.payloadfunc.getStats() + "\n";
-	}
-		
-}
-
-function PeriodicDelete(operation, resid, device, period, finite) {
-	var THISPeriodicDelete = this;
-	this.prototype = new Periodic(operation, resid, device, period, finite);
-	var THISPeriodicDelete_prot = this.prototype;
-	
-	this.res = THISPeriodicDelete_prot.res;
-	this.operation = THISPeriodicDelete_prot.operation;
-	
-	// Functions //////////////////////////////////////////
-	this.run = function() {
-		if (THISPeriodicDelete_prot.finiteres.info > 0) {
-			new Thread(function() {
-				var cycles = THISPeriodicDelete_prot.finiteres.info;
-				while(cycles > 0) {
-					loop();
-					cycles--;
-					THISPeriodicDelete_prot_remainres.info--;
+		if (remaining >= 0) {
+			app.dump("Remaining: " + remaining);
+			if (remaining > 0) {
+				if (periodFunc!=null) {
+					timeout = app.setTimeout(performRequest, periodFunc.perform(), (remaining - 1));
+				} else {
+					timeout = app.setTimeout(performRequest, THISPerformTask.periodres.getInfo(), (remaining - 1));
 				}
-				THISPeriodicDelete.res.remove();
-			}).start();
+				THISPerformTask.remainingres.setInfo(remaining);
+			} else {
+				THISPerformTask.runningres.setInfo("false");
+			}
 		} else {
-			new Thread(function() {
-				while(THISPeriodicDelete_prot.cont) {
-					loop();
-				}
-			}).start();
+			if (periodFunc!=null) {
+				timeout = app.setTimeout(performRequest, periodFunc.perform(), -1);
+			} else {
+				timeout = app.setTimeout(performRequest, THISPerformTask.periodres.getInfo(), -1);
+			}
 		}
 	}
-	
-	var loop = function() {
-		app.dump("Perform Periodic Task");
-		var coapreq = new CoAPRequest();
-		coapreq.open(THISPeriodicDelete_prot.operation, THISPeriodicDelete_prot.deviceres.info);
-		coapreq.send();
 		
-		try {
-			app.dump("Period: " + THISPeriodicDelete_prot.periodres.info);
-			java.lang.Thread.sleep(THISPeriodicDelete_prot.periodres.info);
-		} catch (e if e.javaException instanceof InterruptedException) {
-			app.dump("Spleeping was interrupted");
-		}
+	// Requests /////////////////////////////////////////////
+	this.res.ondelete = function(request) {
+		delete perform_tasks[THISPerformTask.resid];
+		if (timeout)
+			app.clearTimeout(timeout);
+		THISPerformTask.res.remove();
+		request.respond(CodeRegistry.RESP_DELETED);
 	}
 	
-	this.getInfo = function() {
-		return THISPeriodicPostPut_prot.operation + ": " +
-				"name = " + THISPeriodicDelete_prot.name + "; " +
-				"device = " + THISPeriodicDelete_prot.deviceres.getInfo() + "; " +
-				"period = " + THISPeriodicDelete_prot.periodres.getInfo() + "; " +
-				"finite = " + THISPeriodicDelete_prot.finiteres.getInfo();
+	// Functions ////////////////////////////////////////////
+	this.getTimeout = function() {
+		return timeout;
+	}
+	
+	// Running Resource /////////////////////////////////////
+	function RunRes(resid, in_running) {
+		var running = in_running;
+		
+		this.res = new JavaScriptResource(resid);
+		
+		this.res.onget = function(request) {
+			request.respond(CodeRegistry.RESP_CONTENT, running);
+		}
+		
+		this.res.onput = function(request) {
+			var payload = request.getPayloadString().split(';');
+			var run = payload[0];
+			if (run=="true") {
+				if (payload[1] && payload[1]=="continue") {
+					var finite = THISPerformTask.finiteres.getInfo();
+					if (finite > 0) {
+						performRequest(THISPerformTask.remainingres.getInfo()-1);
+					} else {
+						performRequest(-1);
+					}
+				} else {
+					if (periodFunc!=null) periodFunc.reset();
+					var finite = THISPerformTask.finiteres.getInfo();
+					if (finite > 0) {
+						performRequest(finite-1);
+						THISPerformTask.remainingres.setInfo(finite);						
+					} else {
+						performRequest(-1);
+					}
+				}
+				running = run;
+				request.respond(CodeRegistry.RESP_CHANGED);
+			} else if (run=="false") {
+				app.dump("remaining: " + THISPerformTask.remainingres.getInfo());
+				app.clearTimeout(timeout);
+				running = run;
+				request.respond(CodeRegistry.RESP_CHANGED);
+			} else {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST);
+			}
+		}
 	}
 }
 
-// Info Resources ////////////////////////////////////////
-function InfoRes(resid, info) {
-	var THISInfo = this;
 	
-	this.info = info;
+//Info Resources ////////////////////////////////////////
+function InfoRes(resid, in_info) {
+	var info = in_info;
 	
 	this.res = new JavaScriptResource(resid);
 	
-	// Requests /////////////////////////////////////////
 	this.res.onget = function(request) {
-		request.respond(CodeRegistry.RESP_CONTENT, THISInfo.getInfo());
+		request.respond(CodeRegistry.RESP_CONTENT, info);
 	}
 	
 	this.getInfo = function() {
-		if (THISInfo.info == "" ||ÊTHISInfo.info == 0) {
-			return "EMPTY";
-		} else {
-			return THISInfo.info;
-		}
+		return info;
+	}
+	
+	this.setInfo = function(in_info) {
+		info = in_info;
 	}
 }
 
-function ChangeableInfoRes(resid, info) {
-	var THISChangeableInfo = this;
-	this.prototype = new InfoRes(resid, info);
-	var THISChangeableInfo_prot = this.prototype;
+function ChangeableInfoRes(resid, in_info) {
+	var info = in_info;
 	
-	this.info = THISChangeableInfo_prot.info;
-	this.res = THISChangeableInfo_prot.res;
-	this.getInfo = THISChangeableInfo_prot.getInfo
+	this.res = new JavaScriptResource(resid);
 	
-	THISChangeableInfo.res.onput = function(request) {
-		var payload = parseInt(request.getPayloadString());
-		THISChangeableInfo_prot.info = payload;
-		THISChangeableInfo.info = payload;
+	this.res.onget = function(request) {
+		request.respond(CodeRegistry.RESP_CONTENT, info);
+	}
+	
+	this.res.onput = function(request) {
+		info = request.getPayloadString();
 		request.respond(CodeRegistry.RESP_CHANGED);
+	}
+	
+	this.getInfo = function() {
+		return info;
+	}
+	
+	this.setInfo = function(in_info) {
+		info = in_info;
 	}
 }
 
 // Predefiend Functions //////////////////////////////////
-function EmptyFunc() {
-	this.getStats = function() {
-		return "EMPTY";
-	}
-}
 
 function Increaser(start, step, end) {
-	var ret = parseFloat(start);
-	var start = parseFloat(start);
+	var initial_start = parseFloat(start);
+	
+	var ret = initial_start;
+	var start = initial_start;
 	var end = parseFloat(end);
 	var step = parseFloat(step);
-	
+		
 	this.perform = function() {
 		var tmp = ret;
 		ret = ret + step;
@@ -385,19 +263,22 @@ function Increaser(start, step, end) {
 	this.getStats = function() {
 		return "Increaser: start = " + start + "; step = " + step + "; end = " + end; 
 	}
+	
+	this.reset = function() {
+		ret = initial_start;
+	}
 }
 
 function Set(set) {
 	var set = set;
 	var counter = 0;
-	
+		
 	this.perform = function() {
 		var tmp = counter;
 		counter = (counter + 1)%set.length;
-		app.dump("tmp: " + tmp + "  counter: " + counter + "  set: " + set[tmp]);
 		return set[tmp];
 	}
-	
+		
 	this.getStats = function() {
 		var ret = "{" + set[0];
 		for (var i=1; i<set.length; i++) {
@@ -406,19 +287,37 @@ function Set(set) {
 		ret += "}";
 		return "Set Interator: " + ret;
 	}
+	
+	this.reset = function() {
+		counter = 0;
+	}
+}
+
+function Own(evalFunc) {
+	var func = evalFunc;
+	var storage = new Array();
+	
+	this.perform = function() {
+		var ret = null;
+		
+		eval(func);
+		
+		return ret;
+	}
 }
 
 function getFunc(func) {
 	var fp = new FuncParser(func);
 	var fu = fp.getFunc();
-	if (fu == "inc") {
+	if (fu=="inc") {
 		app.dump("inc found");
 		if (fp.getParamCount() == 3) {
-			app.dump("return increaser");
+			app.dump("increaser");
 			return new Increaser(fp.getParam(1), fp.getParam(2), fp.getParam(3));
 		}
-	} else if (fu == "set") {
-		app.dump("set found");
+		return null;
+	} else if (fu=="set") {
+		app.dump("set");
 		if (fp.getParamCount() > 0) {
 			var set = new Array();
 			for (var i=1; i<=fp.getParamCount(); i++) {
@@ -426,6 +325,13 @@ function getFunc(func) {
 			}
 			return new Set(set);
 		}
+		return null;
+	} else if (fu=="own"){
+		app.dump("own");
+		if (fp.getParamCount()==1) return new Own(fp.getParam(1));
+		else return null;
+	} else {
+		return null;
 	}
 }
 
@@ -435,20 +341,20 @@ function FuncParser(func) {
 	
 	this.param = new Array();
 	
-	var fu = func.split(';');
+	var fu = func.split(';;');
 	this.func = fu[0];
 	for (var i=1; i<fu.length; i++) {
 		this.param.push(fu[i]);
 	}
-	
+		
 	this.getFunc = function() {
 		return THISFuncParser.func;
 	}
-	
+		
 	this.getParam = function(number) {
 		return THISFuncParser.param[number-1];
 	}
-	
+		
 	this.getParamCount = function() {
 		return THISFuncParser.param.length;
 	}
@@ -464,16 +370,27 @@ function PayloadParser(payload) {
 		var split_eq = split_nl[el].split('=');
 		this.map[split_eq[0]] = split_eq[1];
 	}
-	
+		
 	this.get = function(element) {
 		return this.map[element];
 	}
-	
+		
 	this.has = function(element) {
 		if (this.map[element]) {
 			return true;
 		} else {
 			return false;
+		}
+	}
+}
+
+//Clean Up ////////////////////////////////////////////////////////
+app.onunload = function() {
+	for (var el in perform_tasks) {
+		var timeout = perform_tasks[el].getTimeout();
+		if (timeout) {
+			app.dump("clear timeout: " + timeout);
+			app.clearTimeout(timeout);
 		}
 	}
 }
