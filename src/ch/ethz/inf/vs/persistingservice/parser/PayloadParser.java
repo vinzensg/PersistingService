@@ -48,11 +48,13 @@ public class PayloadParser {
 	private HashMap<String, String> payloadMap = new HashMap<String, String>();
 	
 	/**
-	 * Instantiates a new payload parser and build the hashmap corresponding to the payload.
+	 * Instantiates a new payload parser and builds the hashmap corresponding to the payload.
 	 *
-	 * @param payload the payload retrieved from a coap request.
+	 * @param payload the payload read from a coap request.
 	 */
 	public PayloadParser(String payload) {
+		if (payload.equals("")) return;
+		
 		String tmp = payload.replaceAll(" ", "");
 		String[] parameters = tmp.split("\n");
 		
@@ -64,14 +66,14 @@ public class PayloadParser {
 	/**
 	 * Not null checks, if the payload has elements and was parsed successfully.
 	 *
-	 * @return true, if the payload has elements and therefore the it was parsed successfully.
+	 * @return true, if the payload map is not empty.
 	 */
 	public boolean notNull() {
 		return !payloadMap.isEmpty();
 	}
 	
 	/**
-	 * Gets the string value of some label.
+	 * Gets the string value for some label.
 	 *
 	 * @param label the label
 	 * @return the string value stored for the label.
@@ -81,7 +83,7 @@ public class PayloadParser {
 	}
 	
 	/**
-	 * Gets the int value of some label
+	 * Gets the int value for some label
 	 *
 	 * @param label the label
 	 * @return the int value stored for the label.
@@ -91,7 +93,7 @@ public class PayloadParser {
 	}
 	
 	/**
-	 * Gets the boolean value of some label.
+	 * Gets the boolean value for some label.
 	 *
 	 * @param label the label
 	 * @return the boolean value stored for the label.

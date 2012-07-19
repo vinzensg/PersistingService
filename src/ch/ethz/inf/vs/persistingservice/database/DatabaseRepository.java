@@ -40,11 +40,11 @@ import org.ektorp.CouchDbConnector;
 import org.ektorp.ViewQuery;
 import org.ektorp.support.CouchDbRepositorySupport;
 
-import ch.ethz.inf.vs.persistingservice.config.Constants;
+import ch.ethz.inf.vs.persistingservice.config.DateFormats;
 import ch.ethz.inf.vs.persistingservice.database.documents.*;
 
 /**
- * The Class NumberTypeRepository contains the methods to connect to the couchdb
+ * The Class DatabaseRepository contains the methods to connect to the couchdb
  * database and store and retrieve data from it.
  * <p>
  * It contains the standard methods of a CouchDbRepository (i.e. add, contains,
@@ -53,13 +53,18 @@ import ch.ethz.inf.vs.persistingservice.database.documents.*;
  */
 public class DatabaseRepository<T extends Comparable> extends CouchDbRepositorySupport<DefaultStorage<T>> {
 	
-	/** The target device name. */
-	private String deviceName;
+	/** 
+	 * The target deviceID, which uniquly identifies a source resource: 
+	 * 		
+	 * 		top_resource;;device_path?options
+	 */
+	private String deviceID;
 	
+	/** CouchDbConnector to connect to the couchdb database */
 	private CouchDbConnector DBConnector;
 
 	/**
-	 * Instantiates a new number type repository inheriting the standard methods
+	 * Instantiates a new database repository inheriting the standard methods
 	 * add, contains, remove and update.
 	 * 
 	 * @param class1
@@ -67,14 +72,15 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param db
 	 *            the db is used to connect to the couchdb database and perform
 	 *            the queries.
-	 * @param deviceName
-	 *            the device name is stored to retrieve the documents containing
+	 * @param deviceID
+	 *            the deviceID is stored to retrieve the documents containing
 	 *            data for the specified device.
 	 */
-	public DatabaseRepository(Class<DefaultStorage<T>> class1, CouchDbConnector db, String deviceName) {
+	public DatabaseRepository(Class<DefaultStorage<T>> class1, CouchDbConnector db, String deviceID) {
 		super(class1, db);
 		
-		this.deviceName = deviceName;
+		System.out.println("Database deviceID: " + deviceID);
+		this.deviceID = deviceID;
 		this.DBConnector = db;
 	}
 
@@ -84,10 +90,10 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * device.
 	 * 
 	 * @return the list contains all the documents for the specified
-	 *         device is returned with the format of {@link NumberType.Default}.
+	 *         device is returned with the format of {@link Default}.
 	 */
 	public List<Default> queryDevice(String type) {
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device").key(deviceName);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device").key(deviceID).descending(true);
 		return DBConnector.queryView(viewQuery, Default.class);
 	}
 	
@@ -96,10 +102,10 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * device.
 	 * 
 	 * @return the list contains only one document for the specified
-	 *         device, which contains the sum and is returned with the format of {@link NumberType.Sum}.
+	 *         device, which contains the sum and is returned with the format of {@link Sum}.
 	 */
 	public List<Sum> queryDeviceSum(String type) {
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_sum").key(deviceName);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_sum").key(deviceID);
 		return DBConnector.queryView(viewQuery, Sum.class);
 	}
 
@@ -108,10 +114,10 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * device.
 	 * 
 	 * @return the list contains only one document for the specified
-	 *         device, which contains the avg and is returned with the format of {@link NumberType.Avg}.
+	 *         device, which contains the avg and is returned with the format of {@link Avg}.
 	 */
 	public List<Avg> queryDeviceAvg(String type) {
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_avg").key(deviceName);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_avg").key(deviceID);
 		return DBConnector.queryView(viewQuery, Avg.class);
 	}
 
@@ -120,10 +126,10 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * device.
 	 * 
 	 * @return the list contains only one document for the specified
-	 *         device, which contains the max and is returned with the format of {@link NumberType.Max}.
+	 *         device, which contains the max and is returned with the format of {@link Max}.
 	 */
 	public List<Max> queryDeviceMax(String type) {
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_max").key(deviceName);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_max").key(deviceID);
 		return DBConnector.queryView(viewQuery, Max.class);
 	}
 
@@ -132,10 +138,10 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * device.
 	 * 
 	 * @return the list contains only one document for the specified
-	 *         device, which contains the min and is returned with the format of {@link NumberType.Min}.
+	 *         device, which contains the min and is returned with the format of {@link Min}.
 	 */
 	public List<Min> queryDeviceMin(String type) {
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_min").key(deviceName);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_min").key(deviceID);
 		return DBConnector.queryView(viewQuery, Min.class);
 	}
 	
@@ -147,13 +153,13 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param limit
 	 *            the limit defines the number of documents to be returned.
 	 * @return the list contains all the documents for the specified device,
-	 *         which is returned with the format of {@link NumberType.Default}.
+	 *         which is returned with the format of {@link Default}.
 	 */
 	public List<Default> queryDeviceLimit(int limit, String type) {
-		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		DateFormat dateFormat = new SimpleDateFormat(DateFormats.DATE_FORMAT);
 		Date date = new Date();
-		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(date));
-		ComplexKey keyStart = ComplexKey.of(deviceName, "2012/03/01-00:00:00");
+		ComplexKey keyEnd = ComplexKey.of(deviceID, dateFormat.format(date));
+		ComplexKey keyStart = ComplexKey.of(deviceID, "2012/03/01-00:00:00");
 		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date").startKey(keyEnd).endKey(keyStart).limit(limit).descending(true);
 		return DBConnector.queryView(viewQuery, Default.class);
 	}
@@ -165,14 +171,14 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param date
 	 *            the date
 	 * @return the list contains all the documents for the specified
-	 *         device, which is returned with the format of {@link NumberType.Default}.
+	 *         device, which is returned with the format of {@link Default}.
 	 */
 	public List<Default> queryDeviceSince(String date, String type) {
-		ComplexKey keyStart = ComplexKey.of(deviceName, date);
-		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		ComplexKey keyStart = ComplexKey.of(deviceID, date);
+		DateFormat dateFormat = new SimpleDateFormat(DateFormats.DATE_FORMAT);
         Date dateEnd = new Date();
-		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(dateEnd));
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date").startKey(keyStart).endKey(keyEnd);
+		ComplexKey keyEnd = ComplexKey.of(deviceID, dateFormat.format(dateEnd));
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date").startKey(keyEnd).endKey(keyStart).descending(true);
 		return DBConnector.queryView(viewQuery, Default.class);
 	}
 	
@@ -184,13 +190,13 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 *            the date
 	 * @return the list contains only one document for the specified device,
 	 *         which contains the sum and is returned in the format
-	 *         {@link NumberType.DateSum}.
+	 *         {@link DateSum}.
 	 */
 	public List<DateSum> queryDeviceSinceSum(String date, String type) {
-		ComplexKey keyStart = ComplexKey.of(deviceName, date);
-		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		ComplexKey keyStart = ComplexKey.of(deviceID, date);
+		DateFormat dateFormat = new SimpleDateFormat(DateFormats.DATE_FORMAT);
 		Date dateEnd = new Date();
-		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(dateEnd));
+		ComplexKey keyEnd = ComplexKey.of(deviceID, dateFormat.format(dateEnd));
 		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_sum").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return DBConnector.queryView(viewQuery, DateSum.class);
 	}
@@ -203,13 +209,13 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 *            the date
 	 * @return the list contains only one document for the specified device,
 	 *         which contains the avg and is returned in the format
-	 *         {@link NumberType.DateAvg}.
+	 *         {@link DateAvg}.
 	 */
 	public List<DateAvg> queryDeviceSinceAvg(String date, String type) {
-		ComplexKey keyStart = ComplexKey.of(deviceName, date);
-		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		ComplexKey keyStart = ComplexKey.of(deviceID, date);
+		DateFormat dateFormat = new SimpleDateFormat(DateFormats.DATE_FORMAT);
 		Date dateEnd = new Date();
-		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(dateEnd));
+		ComplexKey keyEnd = ComplexKey.of(deviceID, dateFormat.format(dateEnd));
 		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_avg").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return DBConnector.queryView(viewQuery, DateAvg.class);
 	}
@@ -222,13 +228,13 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 *            the date
 	 * @return the list contains only one document for the specified device,
 	 *         which contains the max and is returned in the format
-	 *         {@link NumberType.DateMax}.
+	 *         {@link DateMax}.
 	 */
 	public List<DateMax> queryDeviceSinceMax(String date, String type) {
-		ComplexKey keyStart = ComplexKey.of(deviceName, date);
-		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		ComplexKey keyStart = ComplexKey.of(deviceID, date);
+		DateFormat dateFormat = new SimpleDateFormat(DateFormats.DATE_FORMAT);
 		Date dateEnd = new Date();
-		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(dateEnd));
+		ComplexKey keyEnd = ComplexKey.of(deviceID, dateFormat.format(dateEnd));
 		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_max").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return DBConnector.queryView(viewQuery, DateMax.class);
 	}
@@ -241,13 +247,13 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 *            the date
 	 * @return the list contains only one document for the specified device,
 	 *         which contains the min and is returned in the format
-	 *         {@link NumberType.DateMin}.
+	 *         {@link DateMin}.
 	 */
 	public List<DateMin> queryDeviceSinceMin(String date, String type) {
-		ComplexKey keyStart = ComplexKey.of(deviceName, date);
-		DateFormat dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		ComplexKey keyStart = ComplexKey.of(deviceID, date);
+		DateFormat dateFormat = new SimpleDateFormat(DateFormats.DATE_FORMAT);
 		Date dateEnd = new Date();
-		ComplexKey keyEnd = ComplexKey.of(deviceName, dateFormat.format(dateEnd));
+		ComplexKey keyEnd = ComplexKey.of(deviceID, dateFormat.format(dateEnd));
 		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_min").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return (List<DateMin>) DBConnector.queryView(viewQuery, DateMin.class);
 	}
@@ -261,12 +267,12 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param endDate
 	 *            the end date
 	 * @return the list contains all the documents for the specified
-	 *         device, which is returned with the format of {@link NumberType.Default}.
+	 *         device, which is returned with the format of {@link Default}.
 	 */
 	public List<Default> queryDeviceRange(String startDate, String endDate, String type) {
-		ComplexKey startKey = ComplexKey.of(deviceName, startDate);
-		ComplexKey endKey = ComplexKey.of(deviceName, endDate);
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date").startKey(startKey).endKey(endKey);
+		ComplexKey keyStart = ComplexKey.of(deviceID, startDate);
+		ComplexKey keyEnd = ComplexKey.of(deviceID, endDate);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date").startKey(keyEnd).endKey(keyStart).descending(true);
 		return DBConnector.queryView(viewQuery, Default.class);
 	}
 	
@@ -279,12 +285,12 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param endDate
 	 *            the end date
 	 * @return the list contains only one document, which contains the sum and
-	 *         is returned in the format of {@link NumberType.DateSum}.
+	 *         is returned in the format of {@link DateSum}.
 	 */
 	public List<DateSum> queryDeviceRangeSum(String startDate, String endDate, String type) {
-		ComplexKey startKey = ComplexKey.of(deviceName, startDate);
-		ComplexKey endKey = ComplexKey.of(deviceName, endDate);
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_sum").groupLevel(1).startKey(startKey).endKey(endKey);
+		ComplexKey keyStart = ComplexKey.of(deviceID, startDate);
+		ComplexKey keyEnd = ComplexKey.of(deviceID, endDate);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_sum").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return (List<DateSum>) DBConnector.queryView(viewQuery, DateSum.class);
 	}
 
@@ -297,12 +303,12 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param endDate
 	 *            the end date
 	 * @return the list contains only one document, which contains the avg and
-	 *         is returned in the format of {@link NumberType.DateAvg}.
+	 *         is returned in the format of {@link DateAvg}.
 	 */
 	public List<DateAvg> queryDeviceRangeAvg(String startDate, String endDate, String type) {
-		ComplexKey startKey = ComplexKey.of(deviceName, startDate);
-		ComplexKey endKey = ComplexKey.of(deviceName, endDate);
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_avg").groupLevel(1).startKey(startKey).endKey(endKey);
+		ComplexKey keyStart = ComplexKey.of(deviceID, startDate);
+		ComplexKey keyEnd = ComplexKey.of(deviceID, endDate);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_avg").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return (List<DateAvg>) DBConnector.queryView(viewQuery, DateAvg.class);
 	}
 	
@@ -315,12 +321,12 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param endDate
 	 *            the end date
 	 * @return the list contains only one document, which contains the max and
-	 *         is returned in the format of {@link NumberType.DateMax}.
+	 *         is returned in the format of {@link DateMax}.
 	 */
 	public List<DateMax> queryDeviceRangeMax(String startDate, String endDate, String type) {
-		ComplexKey startKey = ComplexKey.of(deviceName, startDate);
-		ComplexKey endKey = ComplexKey.of(deviceName, endDate);
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_max").groupLevel(1).startKey(startKey).endKey(endKey);
+		ComplexKey keyStart = ComplexKey.of(deviceID, startDate);
+		ComplexKey keyEnd = ComplexKey.of(deviceID, endDate);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_max").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return (List<DateMax>) DBConnector.queryView(viewQuery, DateMax.class);
 	}
 	
@@ -333,12 +339,12 @@ public class DatabaseRepository<T extends Comparable> extends CouchDbRepositoryS
 	 * @param endDate
 	 *            the end date
 	 * @return the list contains only one document, which contains the min and
-	 *         is returned in the format of {@link NumberType.DateMin}.
+	 *         is returned in the format of {@link DateMin}.
 	 */
 	public List<DateMin> queryDeviceRangeMin(String startDate, String endDate, String type) {
-		ComplexKey startKey = ComplexKey.of(deviceName, startDate);
-		ComplexKey endKey = ComplexKey.of(deviceName, endDate);
-		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_min").groupLevel(1).startKey(startKey).endKey(endKey);
+		ComplexKey keyStart = ComplexKey.of(deviceID, startDate);
+		ComplexKey keyEnd = ComplexKey.of(deviceID, endDate);
+		ViewQuery viewQuery = new ViewQuery().designDocId("_design/" + type).viewName("device_date_min").groupLevel(1).startKey(keyStart).endKey(keyEnd);
 		return (List<DateMin>) DBConnector.queryView(viewQuery, DateMin.class);
 	}
 }

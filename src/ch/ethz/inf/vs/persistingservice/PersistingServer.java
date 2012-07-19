@@ -64,7 +64,7 @@ public class PersistingServer extends LocalEndpoint {
 	public static void main(String[] args) {
 		try {
 			PersistingServer DBServer = new PersistingServer();
-			System.out.println("Database Server listening on port: " + DBServer.port());
+			System.out.println("Database Server listening on port: " + 5684); // DBServer.getPort());
 			
 			DatabaseConnection DBConnection = new DatabaseConnection();
 			DBConnection.startDB();

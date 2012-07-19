@@ -38,17 +38,22 @@ import org.ektorp.impl.StdCouchDbConnector;
 import org.ektorp.impl.StdCouchDbInstance;
 
 /**
- * The Class DatabaseConnection starts the http client to acess the couchdb
+ * The Class DatabaseConnection starts the http client to access the couchdb
  * database. It uses the standard couchdb port of 5984. A couchdbconnector for
  * the database "californiumdb" is created.
  */
 public class DatabaseConnection {
 	
+	/** standard couchdb port. */
 	final public static int PORT = 5984;
+	
+	/** database name. */
 	final public static String DATABASE = "californiumdb";
 	
+	/** The db instance. */
 	private CouchDbInstance dbInstance;
 	
+	/** The db. */
 	private static CouchDbConnector db;
 			
 	/**
@@ -68,7 +73,7 @@ public class DatabaseConnection {
 	/**
 	 * Gets the couch db connector to access the database "californiumdb".
 	 *
-	 * @return the couch db connector initialized by startDB.
+	 * @return the couch db connector initialized by startDB().
 	 */
 	public static CouchDbConnector getCouchDbConnector() {
 		return db;

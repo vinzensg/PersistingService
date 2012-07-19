@@ -30,104 +30,30 @@
  ******************************************************************************/
 package ch.ethz.inf.vs.persistingservice.resources;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import ch.ethz.inf.vs.californium.coap.CodeRegistry;
-import ch.ethz.inf.vs.californium.coap.Option;
-import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
-import ch.ethz.inf.vs.californium.coap.POSTRequest;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
-import ch.ethz.inf.vs.californium.endpoint.Resource;
-import ch.ethz.inf.vs.persistingservice.parser.PayloadParser;
-import ch.ethz.inf.vs.persistingservice.resources.persisting.PersistingResource;
 
 /**
- * The Class PersistingResource is the top most resource of the persisting
- * resource. It adds the type resources.
+ * The Class PersistingServiceResource is the top most resource of the persisting
+ * resource. It contains the tasks resource.
+ * 
+ * Initial Resource Tree:<br>
+ *	
+ *	/persistingservice<br>
+ * 	|.../tasks<br>
+ * 	|.../general<br>
  */
 public class PersistingServiceResource extends LocalResource {
-	
-	Map<String, Resource> topResources = new HashMap<String, Resource>();
-	
 
 	/**
-	 * Instantiates a new persisting resource and adds the type resources.
-	 * <p>
-	 * The type resources are:<br>
-	 * string<br>
-	 * number<br>
+	 * Instantiates the persisting service resource and adds the tasks resource.
 	 * 
-	 * @param resourceIdentifier
-	 *            the resource identifier
+	 * @param resourceIdentifier the resource identifier
 	 */
 	public PersistingServiceResource(String resourceIdentifier) {
 		super(resourceIdentifier);
-
-	}
-	
-	public void cleanUp(String resName) {
-		if (topResources.containsKey(resName)) {
-			Resource topRes = topResources.get(resName);
-			if (topRes.subResourceCount() == 0) {
-				topResources.remove(resName);
-				topRes.remove();
-			}
-		}
-	}
-	
-	/*
-	 * (topid)
-	 * resid
-	 * deviceroot
-	 * deviceres
-	 * options
-	 * type
-	 */
-	public void performPOST(POSTRequest request) {
-		String payload = request.getPayloadString();
-		PayloadParser parsedPayload = new PayloadParser(payload);
-		if (parsedPayload.containsLabels("resid", "deviceroot", "deviceres", "type")) {
-			String resid = parsedPayload.getStringValue("resid");
-			String type = parsedPayload.getStringValue("type");
-			String deviceroot = parsedPayload.getStringValue("deviceroot");
-			String deviceres = parsedPayload.getStringValue("deviceres");
-			
-			List<Option> options = null;
-			if (parsedPayload.containsLabel("options")) {
-				options = new ArrayList<Option>();
-				String[] opts = (parsedPayload.getStringValue("options")).split("&");
-				for (String opt : opts) {
-					options.add(new Option(opt, OptionNumberRegistry.URI_QUERY));
-				}
-			}
 		
-	
-			if (parsedPayload.containsLabel("topid")) {
-				Resource topRes = null;
-				String topid = parsedPayload.getStringValue("topid");
-				if (topResources.containsKey(topid)) {
-					topRes = topResources.get(topid);
-				} else {
-					topRes = new TopResource(topid);
-					addSubResource(topRes);
-					topResources.put(topid, topRes);
-				}
-				topRes.addSubResource(new PersistingResource(resid, type, deviceroot, deviceres, options, this, topid));
-			} else {
-				addSubResource(new PersistingResource(resid, type, deviceroot, deviceres, options, this, ""));
-			}
-			request.respond(CodeRegistry.RESP_CREATED);
-		} else {
-			request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide: \n" +
-														   "(topid = ...)\n" +
-														   "resid = ...\n" +
-														   "deviceroot = ...\n" +
-														   "deviceres = ...\n" +
-														   "(options = ...)\n" +
-														   "type = number | string");
-		}
+		add(new TasksResource("tasks"));
 	}
+	
+
 }
