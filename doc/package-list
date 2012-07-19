@@ -1,5 +1,10 @@
 ch.ethz.inf.vs.persistingservice
 ch.ethz.inf.vs.persistingservice.config
 ch.ethz.inf.vs.persistingservice.database
+ch.ethz.inf.vs.persistingservice.database.documents
 ch.ethz.inf.vs.persistingservice.parser
 ch.ethz.inf.vs.persistingservice.resources
+ch.ethz.inf.vs.persistingservice.resources.persisting
+ch.ethz.inf.vs.persistingservice.resources.persisting.history
+ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate
+ch.ethz.inf.vs.persistingservice.resources.persisting.history.time
