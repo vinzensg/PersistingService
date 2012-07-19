@@ -8,14 +8,14 @@ var perform_tasks = new Object();
 // Add SubResources ///////////////////////////////////
 
 this.tasksres = new Tasks("tasks");
-this.singlecastres = new SingleCast("singlecast");
+this.singlecastres = new SingleCast("single");
 
 app.root.add(THIS.tasksres.res);
 app.root.add(THIS.singlecastres.res);
 
 // Single Cast ///////////////////////////////////////
 /*
- * Resource to perform a single broadcast without having to create an instance.
+ * Resource to perform a single multicast without having to create an instance.
  */
 function SingleCast(resid) {
 	var THISSingleCast = this;
@@ -24,27 +24,27 @@ function SingleCast(resid) {
 	
 	// Requests ////////////////////////////////////
 	this.res.onpost = function(request) {
-		var answer = performBroadcast(request, "POST");
+		var answer = performMulticast(request, "POST");
 		if (answer=="") request.respond(CodeRegistry.RESP_VALID);
 		else request.respond(CodeRegistry.RESP_BAD_REQUEST, answer);
 	}
 	
 	this.res.onput = function(request) {
-		var answer = performBroadcast(request, "PUT");
+		var answer = performMulticast(request, "PUT");
 		if (answer=="") request.respond(CodeRegistry.RESP_VALID);
 		else request.respond(CodeRegistry.RESP_BAD_REQUEST, answer);
 	}
 	
 	this.res.ondelete = function(request) {
-		var answer = performBroadcast(request, "DELETE");
+		var answer = performMulticast(request, "DELETE");
 		if (answer=="") request.respond(CodeRegistry.RESP_VALID);
 		else request.respond(CodeRegistry.RESP_BAD_REQUEST, answer);
 	}
 	
 	/*
-	 * Perform the single broadcast depending on the operation passed.
+	 * Perform the single multicast depending on the operation passed.
 	 */
-	function performBroadcast(request, operation) {
+	function performMulticast(request, operation) {
 		var payload = request.getPayloadString();
 		var pp = new PayloadParser(payload);
 		if (!(pp.has("target1"))) {
@@ -170,7 +170,7 @@ function PerformTask(resid, targets, targetdecisions) {
 	}
 
 	/*
-	 * The cast resource lets the user perform the broadcast for a specified broadcast task.
+	 * The cast resource lets the user perform the multicast for a specified multicast task.
 	 */
 	function Cast(resid, in_targets) {
 		var THISCast = this;
@@ -181,24 +181,24 @@ function PerformTask(resid, targets, targetdecisions) {
 		
 		// Requests ////////////////////////////////////
 		this.res.onpost = function(request) {
-			performBroadcast(request, "POST");
+			performMulticast(request, "POST");
 			request.respond(CodeRegistry.RESP_VALID);
 		}
 		
 		this.res.onput = function(request) {
-			performBroadcast(request, "PUT");
+			performMulticast(request, "PUT");
 			request.respond(CodeRegistry.RESP_VALID);
 		}
 		
 		this.res.ondelete = function(request) {
-			performBroadcast(request, "DELETE");
+			performMulticast(request, "DELETE");
 			request.respond(CodeRegistry.RESP_VALID);
 		}
 	
 		/*
-		 * Perform the broadcast depending on the operation passed.
+		 * Perform the multicast depending on the operation passed.
 		 */
-		function performBroadcast(request, operation) {
+		function performMulticast(request, operation) {
 			var payload = request.getPayloadString();
 			for (var el in targets) {
 				var decisionFunc = THISPerformTask.decisionsres.decisions[el].getFunc()
