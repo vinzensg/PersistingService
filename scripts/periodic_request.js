@@ -1,5 +1,8 @@
 var THIS = this;
 
+/*
+ * perform tasks keeps track of the tasks created.
+ */
 var perform_tasks = new Object();
 
 // Add SubResources ////////////////////////////////////
@@ -9,7 +12,13 @@ this.tasksres = new Tasks("tasks");
 app.root.add(THIS.tasksres.res);
 
 // Tasks ///////////////////////////////////////////////
-
+/*
+ * The tasks resource holds all the tasks created.
+ * 
+ * Requests:
+ * -	GET: get a list of all the tasks.
+ * -	POST: create a new task.
+ */
 function Tasks(resid) {
 	var THISTasks = this;
 	
@@ -24,43 +33,73 @@ function Tasks(resid) {
 	}
 
 	this.res.onpost = function(request) {
-		app.dump("Recieve post");
+		app.dump("Create new task.");
 		var payload = request.getPayloadString();
 		var pp = new PayloadParser(payload);
-		if (pp.has("resid") && pp.has("device") && pp.has("operation") && (pp.has("period") || pp.has("periodfunc"))) {
-			var periodfunc = null;
-			if (pp.has("periodfunc")) {
-				periodfunc = pp.get("periodfunc");
+		if (pp.has("resid") && pp.has("target") && pp.has("operation") && (pp.has("period") || pp.has("periodfunc"))) {
+			if (perform_tasks[pp.get("resid")] != null) {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "resid already exists.");
+				return;
 			}
+			
+			var operation = pp.get("operation");
+			if (!(operation=="PUT" || operation=="POST" || operation=="DELETE")) {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad operation.");
+				return;
+			}
+				
+			var periodFunc = null;
+			if (pp.has("periodfunc")) {
+				periodFunc = getFunc(pp.get("periodfunc"));
+				if (periodFunc==null) {
+					request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad periodfunc.");
+					return;
+				}
+			}
+			
 			var finite = 0;
 			if (pp.has("finite")) {
 				finite = pp.get("finite");
 			}
+			
 			var payload = "";
 			if (pp.has("payload")) {
 				payload = pp.get("payload");
 			}
-			var payloadfunc = null;
+			
+			var payloadFunc = null;
 			if (pp.has("payloadfunc")) {
-				payloadfunc = pp.get("payloadfunc");
+				payloadFunc = getFunc(pp.get("payloadfunc"));
+				if (payloadFunc==null) {
+					request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad payloadfunc.");
+					return;
+				}
 			}
-			var perform_task = new PerformTask(pp.get("resid"), pp.get("device"), pp.get("operation"), pp.get("period"), periodfunc, finite, payload, payloadfunc);
+
+			var perform_task = new PerformTask(pp.get("resid"), pp.get("target"), pp.get("operation"), pp.get("period"), periodFunc, finite, payload, payloadFunc);
 			THISTasks.res.add(perform_task.res);
 			request.respond(CodeRegistry.RESP_CREATED);
 		} else {
 			request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide:\n" +
 														   "resid = ...\n" +
-														   "device = ...\n" +
+														   "target = ...\n" +
 														   "operation = ...\n" +
 														   "period = ...\n" +
+														   "(periodfunc = ...)\n" +
 														   "(finite = ...)\n" +
 														   "(payload = ...)\n" +
 														   "(payloadfunc = ...)");
 		}
 	}
 }
-	
-function PerformTask(resid, device, operation, period, periodfunc, finite, payload, payloadfunc) {
+
+/*
+ * A single task is an instance of Perform Task.
+ * 
+ * Requests:
+ * -	DELETE: delete the task.
+ */
+function PerformTask(resid, device, operation, period, periodFunc, finite, payload, payloadFunc) {
 	var THISPerformTask = this;
 	
 	this.resid = resid;
@@ -69,26 +108,18 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 	
 	var timeout = null;
 	
-	var periodFunc = null;
-	if (periodfunc)
-		periodFunc = getFunc(periodfunc);
-	
-	var payloadFunc = null;
-	if (payloadfunc)
-		payloadFunc = getFunc(payloadfunc);
-	
 	this.res = new JavaScriptResource(resid);
 	
 	// Add SubResources ////////////////////////////////////
-	this.deviceres = new InfoRes("device", device);
+	this.deviceres = new InfoRes("target", device);
 	this.runningres = new RunRes("running", "true");
 	this.operationres = new InfoRes("operation", operation);
 	this.periodres = new ChangeableInfoRes("period", period);
-	this.periodfuncres = new InfoRes("periodfunc", periodfunc);
+	this.periodfuncres = new FuncRes("periodfunc", periodFunc);
 	this.finiteres = new InfoRes("finite", finite);
 	this.remainingres = new InfoRes("remaining", finite);
 	this.payloadres = new ChangeableInfoRes("payload", payload);
-	this.payloadfuncres = new InfoRes("payloadfunc", payloadfunc);
+	this.payloadfuncres = new FuncRes("payloadfunc", payloadFunc);
 	
 	this.res.add(THISPerformTask.deviceres.res);
 	this.res.add(THISPerformTask.runningres.res);
@@ -99,7 +130,7 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 	this.res.add(THISPerformTask.remainingres.res);
 	this.res.add(THISPerformTask.payloadres.res);
 	this.res.add(THISPerformTask.payloadfuncres.res);
-	
+		
 	// Start Perform Task /////////////////////////////////
 	if (finite > 0) {
 		performRequest(finite - 1);
@@ -107,20 +138,23 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 		performRequest(-1);
 	}
 	
+	/*
+	 * Perform the periodic request.
+	 * If remaining >= 0: perform finite periodic request.
+	 * Otherwise (remaining < 0): perform infinite periodic request.
+	 */
 	function performRequest(remaining) {
-		app.dump("Perform Request");
 		var coapreq = new CoAPRequest();
 		coapreq.open(THISPerformTask.operationres.getInfo(), THISPerformTask.deviceres.getInfo());
-		if (payloadFunc!=null) {
-			coapreq.send(payloadFunc.perform());
+		if (THISPerformTask.payloadfuncres.getFunc()!=null) {
+			coapreq.send(THISPerformTask.payloadfuncres.getFunc().perform());
 		} else {
 			coapreq.send(THISPerformTask.payloadres.getInfo());
 		}
 		if (remaining >= 0) {
-			app.dump("Remaining: " + remaining);
 			if (remaining > 0) {
-				if (periodFunc!=null) {
-					timeout = app.setTimeout(performRequest, periodFunc.perform(), (remaining - 1));
+				if (THISPerformTask.periodfuncres.getFunc()!=null) {
+					timeout = app.setTimeout(performRequest, THISPerformTask.periodfuncres.getFunc().perform(), (remaining - 1));
 				} else {
 					timeout = app.setTimeout(performRequest, THISPerformTask.periodres.getInfo(), (remaining - 1));
 				}
@@ -129,8 +163,8 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 				THISPerformTask.runningres.setInfo("false");
 			}
 		} else {
-			if (periodFunc!=null) {
-				timeout = app.setTimeout(performRequest, periodFunc.perform(), -1);
+			if (THISPerformTask.periodfuncres.getFunc()!=null) {
+				timeout = app.setTimeout(performRequest, THISPerformTask.periodfuncres.getFunc().perform(), -1);
 			} else {
 				timeout = app.setTimeout(performRequest, THISPerformTask.periodres.getInfo(), -1);
 			}
@@ -139,6 +173,7 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 		
 	// Requests /////////////////////////////////////////////
 	this.res.ondelete = function(request) {
+		app.dump("Delete task.")
 		delete perform_tasks[THISPerformTask.resid];
 		if (timeout)
 			app.clearTimeout(timeout);
@@ -152,6 +187,16 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 	}
 	
 	// Running Resource /////////////////////////////////////
+	/*
+	 * Resource to keep track, if the periodic request is running or not.
+	 * 
+	 * Requests:
+	 * -	GET: return running status.
+	 * -	PUT: change the running status.
+	 * 			false: stop periodic request.
+	 * 			true: restart periodic request.
+	 * 			true;continue: continue periodic request.
+	 */
 	function RunRes(resid, in_running) {
 		var running = in_running;
 		
@@ -173,7 +218,8 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 						performRequest(-1);
 					}
 				} else {
-					if (periodFunc!=null) periodFunc.reset();
+					if (THISPerformTask.periodfuncres.getFunc()!=null) THISPerformTask.periodfuncres.getFunc().reset();
+					if (THISPerformTask.payloadfuncres.getFunc()!=null) THISPerformTask.payloadfuncres.getFunc().reset();
 					var finite = THISPerformTask.finiteres.getInfo();
 					if (finite > 0) {
 						performRequest(finite-1);
@@ -194,10 +240,57 @@ function PerformTask(resid, device, operation, period, periodfunc, finite, paylo
 			}
 		}
 	}
+	
+	app.dump("New task created.");
 }
 
+//Function Resource ////////////////////////////////////
+/*
+ * A resource specially for the functions.
+ * 
+ * Requests:
+ * -	GET: get the function type.
+ * -	PUT: change the function.	
+ */
+function FuncRes(resid, in_func_obj) {
+	var THISFuncRes = this;
+	
+	var func_obj = in_func_obj;
+	
+	this.res = new JavaScriptResource(resid);
+	
+	this.res.onget = function(request) {
+		if (func_obj) request.respond(CodeRegistry.RESP_CONTENT, func_obj.getStats());
+		else request.respond(CodeRegistry.RESP_CONTENT, "");
+	}
+	
+	this.res.onput = function(request) {
+		var payload = request.getPayloadString();
+		if (payload=="remove") {
+			func_obj = null;
+			request.respond(CodeRegistry.RESP_CHANGED);
+		} else {
+			var new_func = getFunc(payload);
+			if (new_func!=null) {
+				func_obj = new_func;
+				request.respond(CodeRegistry.RESP_CHANGED);
+			} else {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST);
+			}
+		}	
+	}
+	
+	this.getFunc = function() {
+		return func_obj;
+	}
+}
 	
 //Info Resources ////////////////////////////////////////
+/*
+ * A resource for all information resources.
+ * 
+ * -	GET: get the information.
+ */
 function InfoRes(resid, in_info) {
 	var info = in_info;
 	
@@ -216,6 +309,12 @@ function InfoRes(resid, in_info) {
 	}
 }
 
+/*
+ * A resource for all information resources.
+ * 
+ * -	GET: get the information.
+ * -	PUT: change the information.
+ */
 function ChangeableInfoRes(resid, in_info) {
 	var info = in_info;
 	
@@ -240,7 +339,12 @@ function ChangeableInfoRes(resid, in_info) {
 }
 
 // Predefiend Functions //////////////////////////////////
-
+/*
+ * All period and payload functions:
+ * -	increaser
+ * -	set
+ * -	own
+ */
 function Increaser(start, step, end) {
 	var initial_start = parseFloat(start);
 	
@@ -261,7 +365,7 @@ function Increaser(start, step, end) {
 	}
 	
 	this.getStats = function() {
-		return "Increaser: start = " + start + "; step = " + step + "; end = " + end; 
+		return "inc;;" + start + ";;" + step + ";;" + end; 
 	}
 	
 	this.reset = function() {
@@ -280,12 +384,11 @@ function Set(set) {
 	}
 		
 	this.getStats = function() {
-		var ret = "{" + set[0];
+		var ret = set[0];
 		for (var i=1; i<set.length; i++) {
-			ret += ", " + set[i];
+			ret += ";;" + set[i];
 		}
-		ret += "}";
-		return "Set Interator: " + ret;
+		return "set;;" + ret;
 	}
 	
 	this.reset = function() {
@@ -304,15 +407,21 @@ function Own(evalFunc) {
 		
 		return ret;
 	}
+	
+	this.getStats = function() {
+		return "own;;" + func + ";;";
+	}
 }
 
+/*
+ * Returns the function object depending on the function-string passed (from the payload).
+ */
 function getFunc(func) {
 	var fp = new FuncParser(func);
 	var fu = fp.getFunc();
 	if (fu=="inc") {
-		app.dump("inc found");
+		app.dump("inc");
 		if (fp.getParamCount() == 3) {
-			app.dump("increaser");
 			return new Increaser(fp.getParam(1), fp.getParam(2), fp.getParam(3));
 		}
 		return null;
@@ -336,6 +445,9 @@ function getFunc(func) {
 }
 
 // Function Parser ////////////////////////////////////////
+/*
+ * The function parser extracts the information from the function-string (from the paylod).
+ */
 function FuncParser(func) {
 	var THISFuncParser = this;
 	
@@ -360,21 +472,71 @@ function FuncParser(func) {
 	}
 }
 
-// Payload Parser /////////////////////////////////////////
+//Payload Parser /////////////////////////////////////////
+/*
+ * The payload parser parses the payload and extracts the labels and their values.
+ */
 function PayloadParser(payload) {
 	this.map = new Object();
 	
-	var pl = payload.split(' ').join('');
-	var split_nl = pl.split('\n');
-	for (el in split_nl) {
-		var split_eq = split_nl[el].split('=');
-		this.map[split_eq[0]] = split_eq[1];
+	try {
+		var split_nl = payload.split('\n');
+		for (var el=0; el<split_nl.length; el++) {
+			var label = split_nl[el].substring(0, split_nl[el].indexOf('=')-1);
+			if (label=="periodfunc" || label=="payloadfunc") { // special treatment for the functions (...func = own;;FUNCTION;;)
+				var func = split_nl[el].substring(split_nl[el].indexOf('=')+1);
+				while(func.indexOf(' ')==0) { // remove spaces after the equal sign: '   own' -> 'own'
+					func = func.substring(1);
+				}
+				if (func.indexOf("own")==0) { // if own was specified for the function
+					func += "\n";
+					if (split_nl[el+1] && !(""+split_nl[el+1]).indexOf(';;')==0) { // read all lines.
+						el++;
+						while(split_nl[el] && (""+split_nl[el]).indexOf(';;')==-1){ // read all the lines until the second ;;
+							func += split_nl[el] + "\n";
+							el++;
+						}
+						if (split_nl[el].indexOf(';;;')!=-1) { // the last line may contain three ;;;: own;;ret = 10;;;
+							func += split_nl[el].substring(0, split_nl[el].indexOf(';;;')+1);
+						} else {
+							func += split_nl[el].substring(0, split_nl[el].indexOf(';;'));
+						}
+					}
+				}
+				
+				this.map[label] = func;
+			} else if (label=="payload"){
+				var payl = split_nl[el].substring(split_nl[el].indexOf('=')+1);
+				while (payl.indexOf(' ')==0) {
+					payl = payl.substring(1);
+				}
+				if (payl.indexOf(';;')==0) {
+					payl = payl.substring(2); // remove ';;'
+					payl += "\n";
+					if (split_nl[el+1] && !(""+split_nl[el+1]).indexOf(';;')==0) { // read all lines.
+						el++;
+						while(split_nl[el] && (""+split_nl[el]).indexOf(';;')==-1){ // read all the lines until the second ;;
+							payl += split_nl[el] + "\n";
+							el++;
+						}		
+						payl += split_nl[el].substring(0, split_nl[el].indexOf(';;'));
+						payl = payl.replace(/;:;/g, ";;");
+					}
+				}
+				this.map["payload"] = payl;
+			} else {
+				var no_space = split_nl[el].split(' ').join('');
+				this.map[no_space.substring(0, no_space.indexOf('='))] = no_space.substring(no_space.indexOf('=')+1);
+			}
+		}
+	} catch (e if e.javaException instanceof StringIndexOutOfBoundsException) {
+		app.dump("Invalid Payload: could not be parsed.");
 	}
-		
+	
 	this.get = function(element) {
 		return this.map[element];
 	}
-		
+	
 	this.has = function(element) {
 		if (this.map[element]) {
 			return true;
@@ -385,6 +547,9 @@ function PayloadParser(payload) {
 }
 
 //Clean Up ////////////////////////////////////////////////////////
+/*
+ * Clean up all the pending timeouts.
+ */
 app.onunload = function() {
 	for (var el in perform_tasks) {
 		var timeout = perform_tasks[el].getTimeout();

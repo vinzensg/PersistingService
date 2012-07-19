@@ -1,5 +1,8 @@
 var THIS = this;
 
+/*
+ * perform tasks keeps track of the tasks created.
+ */
 var perform_tasks = new Object();
 
 // Add SubResources ///////////////////////////////////
@@ -9,7 +12,13 @@ this.tasksres = new Tasks("tasks");
 app.root.add(THIS.tasksres.res);
 
 // Tasks /////////////////////////////////////////////
-
+/*
+ * The tasks resource holds all the tasks created.
+ * 
+ * Requests:
+ * -	GET: get a list of all the tasks.
+ * -	POST: create a new task.
+ */
 function Tasks(resid) {
 	var THISTasks = this;
 	
@@ -24,24 +33,43 @@ function Tasks(resid) {
 	}
 
 	this.res.onpost = function(request) {
-		app.dump("Receive post");
+		app.dump("Create new task.");
 		var payload = request.getPayloadString();
 		var pp = new PayloadParser(payload);
+		
 		if (pp.has("resid") && pp.has("source") && pp.has("target") && pp.has("targetoperation") && pp.has("modifyfunc")) {
-			if (pp.has("modifyfuncelse") && !pp.has("decisionfunc")) {
-				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide: decisionfunc = ...");
+			if (perform_tasks[pp.get("resid")] != null) {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "resid already exists.");
 				return;
 			}
 			
-			var decisionfunc = null;
+			var targetoperation = pp.get("targetoperation");
+			if (!(targetoperation=="PUT" ||Êtargetoperation=="POST" || targetoperation=="DELETE")) {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad targetoperation.");
+				return;
+			}
+			var decisionFunc = null;
 			if (pp.has("decisionfunc")) {
-				decisionfunc = pp.get("decisionfunc");
+				decisionFunc = getDecisionFunc(pp.get("decisionfunc"));
+				if (decisionFunc==null) {
+					request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad decisionfunc.");
+					return;
+				}
 			}
-			var modifyfuncelse = null;
+			var modifyFunc = getModifyFunc(pp.get("modifyfunc"));
+			if (modifyFunc==null) {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad modifyfunc.");
+				return;
+			}
+			var modifyFuncElse = null;
 			if (pp.has("modifyfuncelse")) {
-				modifyfuncelse = pp.get("modifyfuncelse");
+				modifyFuncElse = getModifyFunc(pp.get("modifyfuncelse"));
+				if (modifyFuncElse==null) {
+					request.respond(CodeRegistry.RESP_BAD_REQUEST, "Bad modifyelsefunc.");
+					return;
+				}
 			}
-			var perform_task = new PerformTask(pp.get("resid"), pp.get("source"), pp.get("target"), pp.get("targetoperation"), decisionfunc, pp.get("modifyfunc"), modifyfuncelse);
+			var perform_task = new PerformTask(pp.get("resid"), pp.get("source"), pp.get("target"), targetoperation, decisionFunc, modifyFunc, modifyFuncElse);
 			THISTasks.res.add(perform_task.res);
 			request.respond(CodeRegistry.RESP_CREATED);
 		} else {
@@ -57,21 +85,20 @@ function Tasks(resid) {
 	}
 }
 
-
-function PerformTask(resid, source, target, targetoperation, decisionfunc, modifyfunc, modifyfuncelse) {
+/*
+ * A single task is an instance of Perform Task.
+ * 
+ * Requests:
+ * -	DELETE: delete the task.
+ */
+function PerformTask(resid, source, target, targetoperation, decisionFunc, modifyFunc, modifyFuncElse) {
 	var THISPerformTask = this;
 	
 	this.resid = resid;
 	
+	var old_payload = "";
+	
 	perform_tasks[this.resid] = this;
-	
-	this.decisionFunc = null;
-	if (decisionfunc) this.decisionFunc = getDecisionFunc(decisionfunc);
-	
-	this.modifyFunc = getModifyFunc(modifyfunc);
-		
-	this.modifyFuncElse = null;
-	if (modifyfuncelse) this.modifyFuncElse = getModifyFunc(modifyfuncelse);
 	
 	// Add SubResources ////////////////////////////////
 	
@@ -79,79 +106,114 @@ function PerformTask(resid, source, target, targetoperation, decisionfunc, modif
 	
 	this.sourceres = new InfoRes("source", source);
 	this.targetres = new InfoRes("target", target);
-	this.modifyres = new FuncRes("modifyfunc", THISPerformTask.modifyFunc, getModifyFunc, target, targetoperation);
+	this.targetoperationres = new InfoRes("targetoperation", targetoperation);
+	this.outputres = new OutputRes("output", source, target, targetoperation);
+	this.decisionres = new FuncRes("decisionfunc", decisionFunc, getDecisionFunc, target, targetoperation);
+	this.modifyres = new FuncRes("modifyfunc", modifyFunc, getModifyFunc, target, targetoperation);
+	this.modifyelseres = new FuncRes("modifyfuncelse", modifyFuncElse, getModifyFunc, target, targetoperation);
 	
 	this.res.add(THISPerformTask.sourceres.res);
 	this.res.add(THISPerformTask.targetres.res);
+	this.res.add(THISPerformTask.targetoperationres.res);
+	this.res.add(THISPerformTask.outputres.res);
+	this.res.add(THISPerformTask.decisionres.res);
 	this.res.add(THISPerformTask.modifyres.res);
-	
-	if (decisionfunc) {
-		this.decisionres = new FuncRes("decisionfunc", THISPerformTask.decisionFunc, getDecisionFunc);
-		this.res.add(THISPerformTask.decisionres.res);
-	}
-	if (modifyfuncelse) {
-		this.modifyelseres = new FuncRes("modifyfuncelse", THISPerformTask.modifyFuncElse, getModifyFunc);
-		this.res.add(THISPerformTask.modifyelseres.res);
-	}
-	
-	// Perform Control Loop //////////////////////////////
-		
-	var source_request = new CoAPRequest();
-	source_request.open("GET", source);
-	source_request.setObserverOption();
-	var respHandler = new RespHandler(target, targetoperation);
-	source_request.onload = respHandler.handle
-	source_request.send();
+	this.res.add(THISPerformTask.modifyelseres.res);
 	
 	// Requests ////////////////////////////////////////
 	this.res.ondelete = function (request) {
+		app.dump("Delete task.");
+		unregisterAsObserver();
 		delete perform_tasks[THISPerformTask.resid];
 		request.respond(CodeRegistry.RESP_DELETED);
 		THISPerformTask.res.remove();
 	}
 	
-	// Function ////////////////////////////////////////////
-
-	var old_payload = "";
-	
-	function modifyPayload(payload, target, target_operation) {
-		old_payload = payload;
-		var target_val = null;
-		if (THISPerformTask.decisionFunc!=null && THISPerformTask.modifyFunc!=null && THISPerformTask.modifyFuncElse!=null) {
-			app.dump("if else")
-			if (THISPerformTask.decisionres.getFunc().check(payload)) target_val = THISPerformTask.modifyres.getFunc().perform(payload);
-			else target_val = THISPerformTask.modifyelseres.getFunc().perform(payload);
-		} else if (THISPerformTask.decisionFunc!=null && THISPerformTask.modifyFunc!=null) {
-			app.dump("if");
-			if (THISPerformTask.decisionres.getFunc().check(payload)) target_val = THISPerformTask.modifyres.getFunc().perform(payload);
-		} else { // modifyfunc only
-			app.dump("perform");
-			target_val = THISPerformTask.modifyres.getFunc().perform(payload);
-		}
-		app.dump("target_val: " + target_val);
-		if (target_val) {
-			var target_request = new CoAPRequest();
-			target_request.open(target_operation, target);
-			target_request.send(target_val);
-		}
+	// Functions ////////////////////////////////////////////
+	/*
+	 * Unregister from source, when not needed anymore.
+	 */
+	function unregisterAsObserver() {
+		var unregister = new CoAPRequest();
+		unregister.open("GET", THISPerformTask.sourceres.getInfo());
+		unregister.async = true;
+		unregister.send();
 	}
 	
-	// Response Handler /////////////////////////////////////
 	
-	function RespHandler(in_target, in_target_operation) {
-		var target = in_target;
-		var target_operation = in_target_operation;
+	function OutputRes(resid, source, target, targetoperation) {
+		var THISOutputRes = this;
 		
-		this.handle = function(request) {
-			var payload = request.getPayloadString();
-			modifyPayload(payload, target, target_operation);
+		this.res = new JavaScriptResource(resid);
+		this.res.isObservable(true);
+		
+		var target_val = null;
+		
+		// Requests //////////////////////////////////////////
+		this.res.onget = function(request) {
+			if (target_val) request.respond(CodeRegistry.RESP_CONTENT, target_val);
+			else request.respond(CodeRegistry.RESP_CONTENT, "");
+		}
+		
+		// Perform Control Loop //////////////////////////////
+		var source_request = new CoAPRequest();
+		source_request.open("GET", source);
+		source_request.setObserverOption();
+		var respHandler = new RespHandler(target, targetoperation);
+		source_request.onload = respHandler.handle
+		source_request.send();
+		
+		/*
+		 * Modify the incoming value depending on the decision function, the modification function and the modification-else function.
+		 * 
+		 * After the modification, the new value is sent to the target.
+		 */
+		function modifyPayload(payload, target, target_operation) {
+			old_payload = payload;
+			if (THISPerformTask.decisionres.getFunc()!=null && THISPerformTask.modifyres.getFunc()!=null && THISPerformTask.modifyelseres.getFunc()!=null) {
+				if (THISPerformTask.decisionres.getFunc().check(payload)) target_val = THISPerformTask.modifyres.getFunc().perform(payload);
+				else target_val = THISPerformTask.modifyelseres.getFunc().perform(payload);
+			} else if (THISPerformTask.decisionres.getFunc()!=null && THISPerformTask.modifyres.getFunc()!=null) {
+				if (THISPerformTask.decisionres.getFunc().check(payload)) target_val = THISPerformTask.modifyres.getFunc().perform(payload);
+			} else { // modifyfunc only
+				target_val = THISPerformTask.modifyres.getFunc().perform(payload);
+			}
+			if (target_val!=null) {
+				var target_request = new CoAPRequest();
+				target_request.open(target_operation, target);
+				target_request.send(target_val);
+				THISOutputRes.res.changed();
+			}
+		}
+		
+		// Response Handler /////////////////////////////////////
+		/*
+		 * The response handler gets the value from the source and calls modifyPayload.
+		 */
+		function RespHandler(in_target, in_target_operation) {
+			var target = in_target;
+			var target_operation = in_target_operation;
+			
+			this.handle = function(request) {
+				var payload = request.getPayloadString();
+				modifyPayload(payload, target, target_operation);
+			}
 		}
 	}
+	
+	
 
 	// Function Resource ////////////////////////////////////
-
-	function FuncRes(resid, in_func_obj, in_getFunc, in_target, in_target_operation) {
+	/*
+	 * A resource specially for the functions.
+	 * 
+	 * Requests:
+	 * -	GET: get the function type.
+	 * -	PUT: change the function.
+	 */
+	function FuncRes(in_resid, in_func_obj, in_getFunc, in_target, in_target_operation) {
 		var THISFuncRes = this;
+		var resid = in_resid;
 		
 		var getFunc = in_getFunc;
 		var target = in_target;
@@ -162,18 +224,24 @@ function PerformTask(resid, source, target, targetoperation, decisionfunc, modif
 		this.res = new JavaScriptResource(resid);
 		
 		this.res.onget = function(request) {
-			request.respond(CodeRegistry.RESP_CONTENT, func_obj.getStats());
+			if (func_obj) request.respond(CodeRegistry.RESP_CONTENT, func_obj.getStats());
+			else request.respond(CodeRegistry.RESP_CONTENT, "");
 		}
 		
 		this.res.onput = function(request) {
 			var payload = request.getPayloadString();
-			var new_func = getFunc(payload);
-			if (new_func!=null) {
-				func_obj = new_func;
-				modifyPayload(old_payload, target, target_operation);
+			if (payload=="remove" && resid!="modifyfunc") {
+				func_obj = null;
 				request.respond(CodeRegistry.RESP_CHANGED);
 			} else {
-				request.respond(CodeRegistry.RESP_BAD_REQUEST);
+				var new_func = getFunc(payload);
+				if (new_func!=null) {
+					func_obj = new_func;
+					modifyPayload(old_payload, target, target_operation);
+					request.respond(CodeRegistry.RESP_CHANGED);
+				} else {
+					request.respond(CodeRegistry.RESP_BAD_REQUEST);
+				}
 			}
 		}
 		
@@ -181,10 +249,16 @@ function PerformTask(resid, source, target, targetoperation, decisionfunc, modif
 			return func_obj;
 		}
 	}
+	
+	app.dump("New task created.");
 }
 
 //Info Resource ////////////////////////////////////////
-
+/*
+ * A resource for all information resources.
+ * 
+ * -	GET: get the information.
+ */
 function InfoRes(resid, in_info) {
 	var info = in_info;
 	
@@ -205,61 +279,99 @@ function InfoRes(resid, in_info) {
 
 
 // Decision Functions ////////////////////////////////////////////
-
+/*
+ * All decision functions:
+ * -	equal
+ * -	not equal
+ * -	greater
+ * -	greater equal
+ * -	less
+ * -	less equal
+ * -	contains
+ * -	prefix
+ * -	suffix
+ * -	own
+ */
 function Equal(in_equal) {
-	var equal = in_equal;
+	var equal = null;
+	if (isNaN(in_equal)) equal = ""+in_equal;
+	else equal = parseFloat(in_equal);
 	
-	this.check = function(value) {
+	this.check = function(in_value) {
+		var value = null;
+		if (isNaN(in_value)) value = ""+in_value;
+		else value = parseFloat(in_value);
 		if (value==equal) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "equal: " + equal;
+		return "equal;;" + equal;
+	}
+}
+
+function NotEqual(in_not_equal) {
+	var not_equal = null;
+	if (isNaN(in_not_equal)) not_equal = ""+in_not_equal;
+	else not_equal = parseFloat(in_not_equal),
+	
+	this.check = function(in_value) {
+		var value = null;
+		if (isNaN(in_value)) value = ""+in_value;
+		else value = parseFloat(in_value);
+		if (value!=not_equal) return true;
+		else return false;
+	}
+	
+	this.getStats = function() {
+		return "notequal;;" + not_equal;
 	}
 }
 
 function Greater(in_greater) {
-	var greater = in_greater;
+	var greater = parseFloat(in_greater);
 		
-	this.check = function(value) {
+	this.check = function(in_value) {
+		var value = parseFloat(in_value);
 		if (value>greater) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "greater: " + greater;
+		return "greater;;" + greater;
 	}
 }
 
 function GreaterEqual(in_greatereq) {
-	var greatereq = in_greatereq;
+	var greatereq = parseFloat(in_greatereq);
 	
 	this.check = function(value) {
+		var value = parseFloat(in_value);
 		if (value>=greatereq) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "greaterequal: " + greatereq;
+		return "greaterequal;;" + greatereq;
 	}
 }
 
 function Less(in_less) {
-	var less = in_less;
+	var less = parseFloat(in_less);
 	
-	this.check = function(value) {
+	this.check = function(in_value) {
+		var value = parseFloat(in_value);
 		if (value<less) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "less: " + less;
+		return "less;;" + less;
 	}
 }
 
 function LessEqual(in_lesseq) {
-	var lesseq = in_lesseq;
+	var lesseq = parseFloat(in_lesseq);
 	
 	this.check = function(value) {
 		if (value<=lesseq) return true;
@@ -267,46 +379,46 @@ function LessEqual(in_lesseq) {
 	}
 	
 	this.getStats = function() {
-		return "lessequal: " + lesseq;
+		return "lessequal;;" + lesseq;
 	}
 }
 
 function Contains(in_contains) {
-	var contains = in_contains;
+	var contains = ""+in_contains;
 	
 	this.check = function(value) {
-		if (value.indexOf(contains)!=-1) return true;
+		if ((""+value).indexOf(contains)!=-1) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "contains: " + contains;
+		return "contains;;" + contains;
 	}
 }
 
 function Prefix(in_prefix) {
-	var prefix = in_prefix;
+	var prefix = ""+in_prefix;
 	
 	this.check = function(value) {
-		if (value.indexOf(prefix)==0) return true;
+		if ((""+value).indexOf(prefix)==0) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "prefix: " + prefix;
+		return "prefix;;" + prefix;
 	}
 }
 
 function Suffix(in_suffix) {
-	var suffix = in_suffix;
+	var suffix = ""+in_suffix;
 	
 	this.check = function(value) {
-		if (value.lastIndexOf(suffix)==value.length-suffix.length) return true;
+		if ((""+value).lastIndexOf(suffix)==value.length-suffix.length) return true;
 		else return false;
 	}
 	
 	this.getStats = function() {
-		return "suffix: " + suffix;
+		return "suffix;;" + suffix;
 	}
 }
 
@@ -319,10 +431,13 @@ function Own(evalFunc) {
 	}
 	
 	this.getStats = function() {
-		return "own: " + func;
+		return "own;;" + func;
 	}
 }
 
+/*
+ * Returns the function object depeding on the funcion-string passed (from the payload).
+ */
 function getDecisionFunc(func) {
 	var fp = new FuncParser(func);
 	var fu = fp.getFunc();
@@ -330,6 +445,10 @@ function getDecisionFunc(func) {
 	if (fu=="equal") {
 		app.dump("equal");
 		if (fp.getParamCount()==1) return new Equal(fp.getParam(1));
+		else return null;
+	} else if (fu=="notequal") {
+		app.dump("notequal");
+		if (fp.getParamCount()==1) return new NotEqual(fp.getParam(1));
 		else return null;
 	} else if (fu=="greater") {
 		app.dump("greater");
@@ -369,12 +488,26 @@ function getDecisionFunc(func) {
 }
 
 // Modify Functions //////////////////////////////////////////////
-
+/*
+ * All modification functions available:
+ * -	sum
+ * -	average
+ * -	maximum
+ * -	minimum
+ * -	add
+ * -	subtract
+ * -	multiply
+ * -	divide
+ * -	modulo
+ * -	prefix
+ * -	suffix
+ * -	none
+ * -	own
+ */
 function Sum() {
 	var sum = 0;
 	
 	this.perform = function(value) {
-		app.dump("Sum: " + sum);
 		sum += parseFloat(value);
 		return sum;
 	}
@@ -430,10 +563,10 @@ function Min() {
 }
 
 function Add(in_adder) {
-	var adder = in_adder;
+	var adder = parseFloat(in_adder);
 	
 	this.perform = function(value) {
-		return parseFloat(value) + parseFloat(adder);
+		return parseFloat(value) + adder;
 	}
 	
 	this.getStats = function() {
@@ -442,10 +575,10 @@ function Add(in_adder) {
 }
 
 function Subtract(in_sub) {
-	var sub = in_sub;
+	var sub = parseFloat(in_sub);
 	
 	this.perform = function(value) {
-		return parseFloat(value) - parseFloat(sub);
+		return parseFloat(value) - sub;
 	}
 	
 	this.getStats = function() {
@@ -454,10 +587,10 @@ function Subtract(in_sub) {
 }
 
 function Multiply(in_multiply) {
-	var multiply = in_multiply;
+	var multiply = parseFloat(in_multiply);
 	
 	this.perform = function(value) {
-		return parseFloat(value) * parseFloat(multiply);
+		return parseFloat(value) * multiply;
 	}
 	
 	this.getStats = function() {
@@ -465,11 +598,11 @@ function Multiply(in_multiply) {
 	}
 }
 
-function Devide(in_devisor) {
-	var divisor = in_divisor;
+function Divide(in_divisor) {
+	var divisor = parseFloat(in_divisor);
 	
 	this.perform = function(value) {
-		return parseFloat(value) / parseFloat(divisor);
+		return parseFloat(value) / divisor;
 	}
 	
 	this.getStats = function() {
@@ -478,10 +611,10 @@ function Devide(in_devisor) {
 }
 
 function Modulo(in_modulo) {
-	var modulo = in_modulo;
+	var modulo = parseFloat(in_modulo);
 	
 	this.perform = function(value) {
-		return parseFloat(value) % parseFloat(modulo);
+		return parseFloat(value) % modulo;
 	}
 	
 	this.getStats = function() {
@@ -493,7 +626,7 @@ function Prefix(in_prefix) {
 	var prefix = in_prefix;
 	
 	this.perform = function(value) {
-		return prefix + value;
+		return ""+prefix + value;
 	}
 	
 	this.getStats = function() {
@@ -505,7 +638,7 @@ function Suffix(in_suffix) {
 	var suffix = in_suffix;
 	
 	this.perform = function(value) {
-		return value + suffix;
+		return ""+value + suffix;
 	}
 	
 	this.getStats = function() {
@@ -513,14 +646,14 @@ function Suffix(in_suffix) {
 	}
 }
 
-function Newest() {
+function None() {
 	
 	this.perform = function(value) {
-		return value;
+		return ""+value;
 	}
 	
 	this.getStats = function() {
-		return "newest";
+		return "none";
 	}
 }
 
@@ -544,6 +677,9 @@ function Own(evalFunc) {
 	}
 }
 
+/*
+ * Returns the function object depending on the function-string passed (from the payload).
+ */
 function getModifyFunc(func) {
 	var fp = new FuncParser(func);
 	var fu = fp.getFunc();
@@ -588,9 +724,9 @@ function getModifyFunc(func) {
 		app.dump("suffix");
 		if (fp.getParamCount()==1) return new Suffix(fp.getParam(1));
 		else return null;
-	} else if (fu=="newest"){
-		app.dump("newest");
-		return new Newest();
+	} else if (fu=="none"){
+		app.dump("none");
+		return new None();
 	} else if (fu=="own") {
 		app.dump("own");
 		if (fp.getParamCount()==1) return new Own(fp.getParam(1));
@@ -601,6 +737,9 @@ function getModifyFunc(func) {
 }
 
 // Function Parser ////////////////////////////////////////
+/*
+ * The function parser extracts the information from the function-string (from the paylod).
+ */
 function FuncParser(func) {
 	var THISFuncParser = this;
 	
@@ -626,34 +765,45 @@ function FuncParser(func) {
 }
 
 //Payload Parser /////////////////////////////////////////
+/*
+ * The payload parser parses the payload and extracts the labels and their values.
+ */
 function PayloadParser(payload) {
 	this.map = new Object();
 
-	var split_nl = payload.split('\n');
-	for (var el=0; el<split_nl.length; el++) {
-		var control_func = split_nl[el].substring(0, split_nl[el].indexOf('=')-1);
-
-		if (control_func=="decisionfunc" || control_func=="modifyfunc" || control_func=="modifyfuncelse") {
-			var func = split_nl[el].substring(split_nl[el].indexOf('=')+1);
-			while(func.indexOf(' ')==0) {
-				func = func.substring(1);
-			}
-			if (func.indexOf("own")==0) {
-				func += "\n";
-				if (split_nl[el+1] && (""+split_nl[el+1]).indexOf(';;')==-1) {
-					el++;
-					while(split_nl[el] && (""+split_nl[el]).indexOf(';;')==-1){
-						func += split_nl[el] + "\n";
-						el++;
-					}
-					func += split_nl[el].substring(0, split_nl[el].indexOf(';;'));
+	try {
+		var split_nl = payload.split('\n');
+		for (var el=0; el<split_nl.length; el++) {
+			var control_func = split_nl[el].substring(0, split_nl[el].indexOf('=')-1);
+	
+			if (control_func=="decisionfunc" || control_func=="modifyfunc" || control_func=="modifyfuncelse") { // special treatment for the functions (...func = own;;FUNCTION;;)
+				var func = split_nl[el].substring(split_nl[el].indexOf('=')+1);
+				while(func.indexOf(' ')==0) { // remove spaces after the equal sign: '   own' -> 'own'
+					func = func.substring(1);
 				}
+				if (func.indexOf("own")==0) { // if own was specified for the function
+					func += "\n";
+					if (split_nl[el+1] && !(""+split_nl[el+1]).indexOf(';;')==0) { // read multiple lines
+						el++;
+						while(split_nl[el] && (""+split_nl[el]).indexOf(';;')==-1){ // read all the lines until the second ;;
+							func += split_nl[el] + "\n";
+							el++;
+						}
+						if (split_nl[el].indexOf(';;;')!=-1) { // the last line may contain three ;;;: own;;ret = 10;;;
+							func += split_nl[el].substring(0, split_nl[el].indexOf(';;;')+1);
+						} else {
+							func += split_nl[el].substring(0, split_nl[el].indexOf(';;'));
+						}
+					}
+				}
+				this.map[control_func] = func;
+			} else {
+				var no_space = split_nl[el].split(' ').join('');
+				this.map[no_space.substring(0, no_space.indexOf('='))] = no_space.substring(no_space.indexOf('=')+1);
 			}
-			this.map[control_func] = func;
-		} else {
-			var no_space = split_nl[el].split(' ').join('');
-			this.map[no_space.substring(0, no_space.indexOf('='))] = no_space.substring(no_space.indexOf('=')+1);
 		}
+	} catch (e if e.javaException instanceof StringIndexOutOfBoundsException) {
+		app.dump("Invalid Payload: could not be parsed.");
 	}
 	
 	this.get = function(element) {
@@ -666,5 +816,15 @@ function PayloadParser(payload) {
 		} else {
 			return false;
 		}
+	}
+}
+
+/*
+ * Unregister as observer from sources.
+ */
+app.onunload = function() {
+	for (var el in perform_tasks) {
+		app.dump("Unregister from source");
+		perform_tasks[el].unregisterAsObserver();
 	}
 }

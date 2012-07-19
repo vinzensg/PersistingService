@@ -1,8 +1,11 @@
 // Import Packages /////////////////////////////////////
 var THIS = this;
 
-THIS.poll = 4000;
+THIS.poll = 1000; // 1 second
 
+/*
+ * perform tasks keeps track of the tasks created.
+ */
 var perform_tasks = new Object();
 
 // Add SubResources ///////////////////////////////////
@@ -12,7 +15,13 @@ this.tasksres = new Tasks("tasks");
 app.root.add(THIS.tasksres.res);
 
 // Tasks /////////////////////////////////////////////
-
+/*
+ * The tasks resource holds all the tasks created.
+ * 
+ * Requests:
+ * -	GET: get a list of all the tasks.
+ * -	POST: create a new task.
+ */
 function Tasks(resid) {
 	var THISTasks = this;
 	
@@ -27,27 +36,43 @@ function Tasks(resid) {
 	}
 
 	this.res.onpost = function(request) {
-		app.dump("Recieve post");
+		app.dump("Create new task.");
 		var payload = request.getPayloadString();
 		var pp = new PayloadParser(payload);
-		if (pp.has("resid") && pp.has("device")) {
+		if (pp.has("resid") && pp.has("source")) {
+			if (perform_tasks[pp.get("resid")] != null) {
+				request.respond(CodeRegistry.RESP_BAD_REQUEST, "resid already exists.");
+				return;
+			}
+			
+			var poll = THIS.poll;
+			if (pp.has("poll")) {
+				poll = pp.get("poll");
+			}
 			var options = "";
 			if (pp.has("options")) {
 				options = pp.get("options");
 			}
-			var perform_task = new PerformTask(pp.get("resid"), pp.get("device"), options);
+			var perform_task = new PerformTask(pp.get("resid"), pp.get("source"), poll, options);
 			THISTasks.res.add(perform_task.res);
 			request.respond(CodeRegistry.RESP_CREATED);
 		} else {
 			request.respond(CodeRegistry.RESP_BAD_REQUEST, "Provide:\n" +
 														   "resid = ...\n" +
-														   "device = ...\n" +
+														   "source = ...\n" +
+														   "poll = ...\n" +
 														   "options = ...");				
 		}	
 	}
 }
 
-function PerformTask(resid, device, options) {
+/*
+ * A single task is an instance of Perform Task.
+ * 
+ * Requests:
+ * -	DELETE: delete the task.
+ */
+function PerformTask(resid, device, poll, options) {
 	var THISPerformTask = this;
 	
 	this.resid = resid;
@@ -59,9 +84,9 @@ function PerformTask(resid, device, options) {
 	this.res = new JavaScriptResource(resid);
 	
 	// add resources for device, options
-	this.deviceres = new InfoRes("device", device);
+	this.deviceres = new InfoRes("source", device);
 	this.optionsres = new InfoRes("options", options);
-	this.pollres = new ChangeableInfoRes("poll", THIS.poll);
+	this.pollres = new ChangeableInfoRes("poll", poll);
 	this.valueres = new Value("value");
 	
 	this.res.add(THISPerformTask.deviceres.res);
@@ -69,6 +94,11 @@ function PerformTask(resid, device, options) {
 	this.res.add(THISPerformTask.pollres.res);
 	this.res.add(THISPerformTask.valueres.res);
 	
+	/*
+	 * The value resource offers an interface to access the polled value.
+	 * 
+	 * -	GET: return the polled value.
+	 */
 	function Value(resid) {
 		var THISValue = this;
 		
@@ -83,8 +113,10 @@ function PerformTask(resid, device, options) {
 		
 		performPoll();
 		
+		/*
+		 * poll in the defined poll interval.
+		 */
 		function performPoll() {
-			app.dump("perform poll");
 			var coapreq = new CoAPRequest();
 			coapreq.open("GET", THISPerformTask.deviceres.getInfo());
 			coapreq.onload = handleValue
@@ -93,6 +125,10 @@ function PerformTask(resid, device, options) {
 			timeout = app.setTimeout(performPoll, THISPerformTask.pollres.getInfo());
 		}
 		
+		/*
+		 * Incoming values are compared with the aold value.
+		 * If the new value is different from the old value change it and send it to all observers.
+		 */
 		function handleValue(request) {
 			var payload = request.getPayloadString();
 			if (payload != value) {
@@ -104,6 +140,7 @@ function PerformTask(resid, device, options) {
 	
 	// Requests /////////////////////////////////////////
 	this.res.ondelete = function(request) {
+		app.dump("Delete task.");
 		delete perform_tasks[THISPerformTask.resid];
 		if (timeout)
 			app.clearTimeout(timeout);
@@ -115,9 +152,16 @@ function PerformTask(resid, device, options) {
 	this.getTimeout = function() {
 		return timeout;
 	}
+	
+	app.dump("New task created.");
 }
 
 //Info Resources ////////////////////////////////////////
+/*
+ * A resource for all information resources.
+ * 
+ * -	GET: get the information.
+ */
 function InfoRes(resid, in_info) {
 	var info = in_info;
 	
@@ -136,9 +180,15 @@ function InfoRes(resid, in_info) {
 	}
 }
 
-function ChangeableInfoRes(resid, in_info, in_func) {
+/*
+ * A resource for all information resources.
+ * 
+ * -	GET: get the information.
+ * -	PUT: change the information
+ */
+function ChangeableInfoRes(resid, in_info) {
+	var THISChangeableInfo = this;
 	var info = in_info;
-	var updateFunc = in_func;
 	
 	this.res = new JavaScriptResource(resid);
 	
@@ -148,11 +198,8 @@ function ChangeableInfoRes(resid, in_info, in_func) {
 	
 	this.res.onput = function(request) {
 		var payload = request.getPayloadString();
-		if (payload != info) {
-			if (updateFunc)
-				updateFunc(info, payload);
-			info = payload;
-		}
+		THISChangeableInfo.setInfo(payload);
+		
 		request.respond(CodeRegistry.RESP_CHANGED);
 	}
 	
@@ -166,6 +213,9 @@ function ChangeableInfoRes(resid, in_info, in_func) {
 }
 
 //Payload Parser ////////////////////////////////////////////////////
+/*
+ * The payload parser parses the payload and extracts the labels and their values.
+ */
 function PayloadParser(payload) {
 	this.map = new Object();
 	
@@ -190,6 +240,9 @@ function PayloadParser(payload) {
 }
 
 //Clean Up ////////////////////////////////////////////////////////
+/*
+ * Clean up the pending timeouts.
+ */
 app.onunload = function() {
 	for (var el in perform_tasks) {
 		var timeout = perform_tasks[el].getTimeout();
