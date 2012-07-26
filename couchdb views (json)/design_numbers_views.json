@@ -1,0 +1,48 @@
+{
+   "_id": "_design/number",
+   "_rev": "114-57cb1f1a9dd899d73855e8dce7bc86b0",
+   "language": "javascript",
+   "views": {
+       "device_sum": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n \t\temit(doc.device, doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"sum\":values[0].sum};\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n                        result.sum = result.sum + values[i].sum;\n                };\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"sum\":values[0]};\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n                        result.sum = result.sum + values[i];\n                };\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device_avg": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n \t\temit(doc.device, doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"count\":values[0].count,\n\t\t\t      \"avg\":values[0].avg};\n\t\tvar sum = (result.avg * result.count);\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n\t\t\tsum = sum + (values[i].avg * values[i].count);\n\t\t\tresult.count = result.count + values[i].count;\n                }\n\t\t\n\t\tresult.avg = ( sum / result.count);\n\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"count\":1,\n\t\t\t      \"avg\":values[0]};\n\t\tvar sum = values[0];\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n                        sum = sum + values[i];\n\t\t\tresult.count = result.count + 1;\n                }\n\t\t\n\t\tresult.avg = (sum / result.count);\n\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n \t\temit(doc.device, doc);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}"
+       },
+       "device_date": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit([doc.device, doc.dateTime], doc);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}"
+       },
+       "device_max": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit(doc.device, doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"max\":values[0].max};\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n\t\t\tif (result.max < values[i].max)\n                        \tresult.max = values[i].max;\n                };\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"max\":values[0]};\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n\t\t\tif (result.max < values[i])\n                        \tresult.max = values[i];\n                };\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device_min": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit(doc.device, doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"min\":values[0].min};\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n\t\t\tif (result.min > values[i].min)\n                        \tresult.min = values[i].min;\n                };\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"min\":values[0]};\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n\t\t\tif (result.min > values[i])\n                        \tresult.min = values[i];\n                };\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device_limit": {
+           "map": "function(doc){\n    \tif(doc.device && doc.value!=null && is_numeric(doc.value)){\n    \t   \temit(doc.device, null);\n    \t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}"
+       },
+       "device_date_sum": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit([doc.device, doc.dateTime] , doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"sum\":values[0].sum};\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n                        result.sum = result.sum + values[i].sum;\n                };\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"sum\":values[0]};\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n                        result.sum = result.sum + values[i];\n                };\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device_date_avg": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit([doc.device, doc.dateTime], doc.value);\n\t}\n\t\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"count\":values[0].count,\n\t\t\t      \"avg\":values[0].avg};\n\t\tvar sum = (result.avg * result.count);\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n\t\t\tsum = sum + (values[i].avg * values[i].count);\n\t\t\tresult.count = result.count + values[i].count;\n                }\n\t\t\n\t\tresult.avg = ( sum / result.count);\n\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"count\":1,\n\t\t\t      \"avg\":values[0]};\n\t\tvar sum = values[0];\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n                        sum = sum + values[i];\n\t\t\tresult.count = result.count + 1;\n                }\n\t\t\n\t\tresult.avg = (sum / result.count);\n\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device_date_max": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit([doc.device, doc.dateTime], doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"max\":values[0].max};\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n\t\t\tif (result.max < values[i].max)\n                        \tresult.max = values[i].max;\n                };\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"max\":values[0]};\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n\t\t\tif (result.max < values[i])\n                        \tresult.max = values[i];\n                };\t\t\n\t\treturn result;\n\t}\n}"
+       },
+       "device_date_min": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_numeric(doc.value)) {\n\t\temit([doc.device, doc.dateTime], doc.value);\n\t}\n\n\tfunction is_numeric(input){\n    \t\treturn typeof(input)=='number';\n  \t}\n}",
+           "reduce": "function(keys, values, rereduce) {\n\tif (rereduce) {\n\t\tvar result = {\"device\":values[0].device,\n\t\t\t      \"min\":values[0].min};\n\t\tfor(var i=1,e=values.length; i<e; ++i) {\n\t\t\tif (result.min > values[i].min)\n                        \tresult.min = values[i].min;\n                };\n\t\treturn result;\n\t} else {\n\t\tvar result = {\"device\": keys[0][0],\n\t\t\t      \"min\":values[0]};\n\t\tfor(var i=1,e=keys.length; i<e; ++i) {\n\t\t\tif (result.min > values[i])\n                        \tresult.min = values[i];\n                };\t\t\n\t\treturn result;\n\t}\n}"
+       },
+   }
+}

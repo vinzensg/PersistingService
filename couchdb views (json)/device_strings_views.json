@@ -1,0 +1,13 @@
+{
+   "_id": "_design/string",
+   "_rev": "18-8bfdea4263e218ffcf92899c1d77c607",
+   "language": "javascript",
+   "views": {
+       "device": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_string(doc.value)) {\n\t\temit(doc.device, doc);\n\t}\n\n\tfunction is_string(input){\n    \t\treturn typeof(input)=='string';\n  \t}\n}"
+       },
+       "device_date": {
+           "map": "function(doc) {\n\tif (doc.device && doc.value!=null && is_string(doc.value)) {\n\t\temit([doc.device, doc.dateTime], doc);\n\t}\n\n\tfunction is_string(input){\n    \t\treturn typeof(input)=='string';\n  \t}\n}"
+       }
+   }
+}
