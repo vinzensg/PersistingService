@@ -36,6 +36,7 @@ import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
 import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
+import ch.ethz.inf.vs.californium.coap.ResponseHandler;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 
 /**
@@ -48,6 +49,12 @@ public class DeviceInfoResource extends LocalResource {
 	
 	/** The deviceROOT. */
 	private String deviceROOT;
+	
+	/** The wellknowncore information to return on a request. */
+	private String wellknowncore;
+	
+	/** The getRequest used to get the most current information. */
+	private Request getRequest;
 
 	/**
 	 * Instantiates a new device info resource.
@@ -59,6 +66,20 @@ public class DeviceInfoResource extends LocalResource {
 		super(resourceIdentifier);
 		this.device = device;
 		this.deviceROOT = deviceROOT;
+		
+		this.wellknowncore = "unknown";
+		
+		getRequest = new GETRequest();
+		getRequest.setURI(deviceROOT+"/.well-known/core");
+		System.out.println("Deviceroot + wellknown: " + deviceROOT + "/.well-known/core");
+		
+		getRequest.registerResponseHandler(new WellKnownCoreHandler());
+		
+		try {
+			getRequest.execute();
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+		}
 	}
 	
 	/**
@@ -68,26 +89,37 @@ public class DeviceInfoResource extends LocalResource {
 		System.out.println("GET DEVICE INFO: get the info (well-known core) of device " + device);
 		request.prettyPrint();
 		
-		String ret = "";
-		
-		Request req = new GETRequest();
-		req.setURI(deviceROOT+"/.well-known/core");
-		req.enableResponseQueue(true);
-		
+		System.out.println("wellknown: " + wellknowncore);
+
 		try {
-			req.execute();
+			getRequest.execute();
 		} catch (IOException e) {
 			System.err.println("Exception : " + e.getMessage());
 		}
 		
 		try {
-			Response resp = req.receiveResponse();
-			if (resp!= null) ret = resp.getPayloadString();
+			Thread.sleep(200);
 		} catch (InterruptedException e) {
 			System.err.println("Exception : " + e.getMessage());
 		}
 		
-		request.respond(CodeRegistry.RESP_CONTENT, ret);
+		request.respond(CodeRegistry.RESP_CONTENT, wellknowncore);
+		
+	}
+	
+	/**
+	 * The class WellKnownCoreHandler handles the returning information and sets the wellknown core information.
+	 */
+	class WellKnownCoreHandler implements ResponseHandler {
+
+		/**
+		 * handleResponse handles the returning response from the .well-known/core request and sets the global variable wellknowncore.
+		 */
+		@Override
+		public void handleResponse(Response response) {
+			wellknowncore = response.getPayloadString();
+		}
+		
 	}
 
 }

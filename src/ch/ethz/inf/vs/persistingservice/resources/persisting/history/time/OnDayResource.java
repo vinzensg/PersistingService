@@ -48,7 +48,7 @@ import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.S
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class OnDayResource is observable and can be used to retrieve all documents for some source device.
+ * The Class OnDayResource is observable and can be used to retrieve all documents for a source device.
  * <p>
  * Depending on the data type, additional subresources are added to retrieve aggregated values from the database.
  * 
@@ -188,11 +188,11 @@ public class OnDayResource<T extends Comparable> extends AbstractTimeResource {
 				withDate = parsedOptions.getBooleanValue("withdate");
 			if (withDate) {
 				for (Default nt : resOnDay) {
-					ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					ret += nt.getValue() + ";" + nt.getDateTime() + "\n";
 				}
 			} else {
 				for (Default nt : resOnDay) {
-					ret += nt.getNumberValue() + "\n";
+					ret += nt.getValue() + "\n";
 				}
 			}
 			return ret;

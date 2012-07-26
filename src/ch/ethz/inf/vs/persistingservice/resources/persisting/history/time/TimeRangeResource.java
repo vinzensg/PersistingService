@@ -47,7 +47,7 @@ import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.S
 
 // TODO: Auto-generated Javadoc
 /**
- * The Class TimeRangeResource is observable and can be used to retrieve all documents for some source device.
+ * The Class TimeRangeResource is observable and can be used to retrieve all documents for a source device.
  * <p>
  * Depending on the data type, additional subresources are added to retrieve aggregated values from the database.
  * 
@@ -157,7 +157,7 @@ public class TimeRangeResource<T extends Comparable> extends AbstractTimeResourc
 			this.startDate = parsedOptions.getStringValue("startdate");
 			this.endDate = parsedOptions.getStringValue("enddate");
 			
-			query.perform(parsedOptions, AbstractQuery.TIMERANGE, startDate, endDate);
+			ret += query.perform(parsedOptions, AbstractQuery.TIMERANGE, startDate, endDate);
 			
 			System.out.println("GETRequst TIMERANGE: (value: " + ret.substring(0, Math.min(50, ret.length())) + ") for device " + device);
 			request.respond(CodeRegistry.RESP_CONTENT, ret);
@@ -192,11 +192,11 @@ public class TimeRangeResource<T extends Comparable> extends AbstractTimeResourc
 				withDate = parsedOptions.getBooleanValue("withdate");
 			if (withDate) {
 				for (Default nt : resTimeRange) {
-					ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					ret += nt.getValue() + ";" + nt.getDateTime() + "\n";
 				}
 			} else {
 				for (Default nt : resTimeRange) {
-					ret += nt.getNumberValue() + "\n";
+					ret += nt.getValue() + "\n";
 				}
 			}
 			return ret;

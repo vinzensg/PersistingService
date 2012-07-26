@@ -47,7 +47,7 @@ import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.M
 import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.SumResource;
 
 /**
- * The Class SinceResource is observable and can be used to retrieve all documents for some source device.
+ * The Class SinceResource is observable and can be used to retrieve all documents for a source device.
  * <p>
  * Depending on the data type, additional subresources are added to retrieve aggregated values from the database.
  * 

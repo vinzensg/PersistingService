@@ -132,7 +132,7 @@ public class MaxResource<T extends Comparable> extends LocalResource {
 						float tmp = 0;
 						for (Default nt : resLimit) {
 							tmp = nt.getNumberValue();
-							if (tmp < max)
+							if (tmp > max)
 								max = tmp;
 						}
 					}

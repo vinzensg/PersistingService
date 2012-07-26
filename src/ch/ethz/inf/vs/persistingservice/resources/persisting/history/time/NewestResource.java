@@ -40,9 +40,7 @@ import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 import ch.ethz.inf.vs.persistingservice.parser.OptionParser;
 
 /**
- * The Class NewestResource is observable and can be used to retrieve all documents for some source device.
- *
- * @param <T> the generic type
+ * The Class NewestResource is observable and can be used to retrieve the newest document for a source device.
  */
 public class NewestResource extends AbstractTimeResource {
 

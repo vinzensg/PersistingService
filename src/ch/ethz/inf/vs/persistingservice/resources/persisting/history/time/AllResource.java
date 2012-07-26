@@ -45,7 +45,7 @@ import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.M
 import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.SumResource;
 
 /**
- * The Class AllResource is observable and can be used to retrieve all documents for some source device.
+ * The Class AllResource is observable and can be used to retrieve all documents for a source device.
  * <p>
  * Depending on the data type, additional subresources are added to retrieve aggregated values from the database.
  * 
@@ -161,11 +161,11 @@ public class AllResource<T extends Comparable> extends AbstractTimeResource {
 				withDate = parsedOptions.getBooleanValue("withdate");
 			if (withDate) {
 				for (Default nt : res) {
-					ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					ret += nt.getValue() + ";" + nt.getDateTime() + "\n";
 				}
 			} else {
 				for (Default nt : res) {
-					ret += nt.getNumberValue() + "\n";
+					ret += nt.getValue() + "\n";
 				}
 			}
 			return ret;

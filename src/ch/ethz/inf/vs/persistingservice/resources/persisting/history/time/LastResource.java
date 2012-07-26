@@ -47,7 +47,7 @@ import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.M
 import ch.ethz.inf.vs.persistingservice.resources.persisting.history.aggregate.SumResource;
 
 /**
- * The Class LastResource is observable and can be used to retrieve all documents for some source device.
+ * The Class LastResource is observable and can be used to retrieve all documents for a source device.
  * <p>
  * Depending on the data type, additional subresources are added to retrieve aggregated values from the database.
  * 
@@ -100,6 +100,7 @@ public class LastResource<T extends Comparable> extends AbstractTimeResource {
 	 */
 	public LastResource(String resourceIdentifier, String type, DatabaseRepository<T> typeRepository, String device, boolean withSubResources) {
 		super(resourceIdentifier);
+		this.isObservable(true);
 		
 		this.type = type;
 		this.typeRepository = typeRepository;
@@ -186,11 +187,11 @@ public class LastResource<T extends Comparable> extends AbstractTimeResource {
 				withDate = parsedOptions.getBooleanValue("withdate");
 			if (withDate) {
 				for (Default nt : resLimit) {
-					ret += nt.getNumberValue() + ";" + nt.getDateTime() + "\n";
+					ret += nt.getValue() + ";" + nt.getDateTime() + "\n";
 				}
 			} else {
 				for (Default nt : resLimit) {
-					ret += nt.getNumberValue() + "\n";
+					ret += nt.getValue() + "\n";
 				}
 			}
 			return ret;

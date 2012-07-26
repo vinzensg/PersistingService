@@ -91,7 +91,7 @@ public class AvgResource<T extends Comparable> extends LocalResource {
 	 * performGET responds with the avg.
 	 */
 	public void performGET(GETRequest request) {
-		System.out.println("GET INTEGER ALL AVG: get request for device " + device);
+		System.out.println("GET ALL AVG: get request for device " + device);
 		request.prettyPrint();
 
 		abstractTimeResource.acceptGetRequest(request, new AvgQuery());
@@ -194,12 +194,15 @@ public class AvgResource<T extends Comparable> extends LocalResource {
 				long time_1 = first;
 				long time_2 = 0;
 				float sum = res.get(0).getNumberValue();
+				System.out.println("SUM: " + sum);
 				for (int i=1; i<res.size(); i++) {
 					time_2 = stringToMillis(res.get(i).getDateTime());
 					sum += res.get(i).getNumberValue() * (time_2 - time_1);
+					System.out.println("SUM: " + sum);
 					time_1 = time_2;
 				}
 				ret += (sum / (time_1 - first + 1));
+				System.out.println("RET: " + ret);
 			}
 			return ret;
 		}
