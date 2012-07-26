@@ -1,0 +1,14 @@
+Die Ports die gebraucht wurden:
+
+-	Actinium App Server:
+	Califronium:	5685
+	
+-	Persisting Service:		
+	Californium: 	5684
+	CouchDB:		5984
+	
+-	Proxy:
+	Listening:		8080
+	Incoming CoAP:	5683
+	Outgoing CoAP:	49490
+	Outgoing HTTP:	8080
