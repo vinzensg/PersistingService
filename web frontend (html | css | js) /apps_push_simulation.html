@@ -1,0 +1,338 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Apps - Push Simulation</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps_push_simulation.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var APP_NAME = "push_simulation";
+         
+         var config_apps = "coap://localhost:5685/apps/appconfigs";
+         var running_apps = "coap://localhost:5685/apps/running";
+         var installed_apps = "coap://localhost:5685/install";
+         var push_simulation_app = "coap://localhost:5685/apps/running/" + APP_NAME;
+         
+         function isInstalled(installedApps) {
+         	var installedAppsArray = installedApps.split("\n");
+         		for (var el in installedAppsArray) {
+         		    if (installedAppsArray[el]==APP_NAME)
+             	return true;
+         	}
+         	return false;
+         }
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         	sendAsyncRequest("GET", running_apps, "", function(xmlhttp) {
+         		if (isInstalled(xmlhttp.responseText)) {
+         			$('#install_button').val("Uninstall");
+         			$('#start_button').removeAttr('disabled');
+         		} else {
+         			$('#install_button').val("Install");
+         			$('#start_button').attr('disabled', 'disabled');
+         		}
+         	});
+         	
+         	updateCreateButton();
+         	
+         	updateSelect();
+         });
+         
+         function updateSelect() {	  
+         	$('.tasks select').empty();
+         	sendAsyncRequest("GET", push_simulation_app + "/tasks", "", function(xmlhttp) {
+         		$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+         			if (value!="") {
+         				$('.tasks select')
+         					.append($("<option></option>")
+         						.attr("value",value)
+         						.text(value));
+         			}
+         		});
+         	});
+            }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Push Simulation</h1>
+            <p>
+               This app can be used to make a non-observable resource observable.
+               A push simulation instance polls on the resource and offers a observable resource to register.
+               Only changed values are pushed to the observing applications.
+            </p>
+            <h2>Create New Push Simulation</h2>
+            <p>
+               Use the input template to create a new push simulation.
+            </p>
+            <h3>Interface</h3>
+            <h4>Payload</h4>
+            <ul>
+               <li>resid: defines the resource name.</li>
+               <li>source: is the source device for the push simulation.</li>
+               <li>options: can be passed for the get request.</li>
+            </ul>
+            <script>
+               function onInstall_Uninstall(input) {
+               	if (input.value=="Install") {
+               		sendAsyncRequest("POST", installed_apps + "/" + APP_NAME, "name = " + APP_NAME, function(xmlhttp) {
+               			input.value = "Uninstall";
+               		});
+               	} else { // input.value=="Uninstall"
+               		sendAsyncRequest("DELETE", config_apps + "/" + APP_NAME, "", function(xmlhttp) {
+               			input.value = "Install";
+               			updateSelect();
+               		});
+               	}
+               }
+            </script>
+            <h3>Main Control</h3>
+            <table border="2" class="nav_input_table">
+               <tr>
+                  <td>
+                     <input id="install_button" type="button" name="install_Button" onClick="onInstall_Uninstall(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Install / Uninstall (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onResidChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onDeviceChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               	
+               function onPollChange(input) {
+               	var ret = "";
+               	var str = input.value.split(' ').join('');
+               	for (var el in str) {
+               		c = str.charAt(el);
+               		if (!isNaN(c))
+               			ret += c;
+               	}
+               	input.value = ret;
+               }
+               
+               var option_counter = 0;
+               function onClickAdd() {
+               	var counter = option_counter;
+               	var option_id = "option_"+option_counter++;
+               	$('#set_options').append(
+               		"<div id=" + option_id + "><input id='opt_"+counter+"' type='text' size='25' /> = <input id='val_"+counter+"' type='text' size='25' /></div>"
+               	);
+               }
+               	
+               function onClickRemove() {
+               	var option_id = "option_"+(--option_counter);
+               	$('#'+option_id).remove();
+               }
+               
+               function onCreate() {
+               	var resid = $('#resid_input').val();
+               	var device = "coap://" + $('#device_input').val();
+               	var poll = $('#poll_input').val();
+               	
+               	var message = "resid = " + resid + "\n";
+               	message += "source = " + device + "\n";
+               	
+               	if (poll!="") message += "poll = " + poll + "\n";
+               	
+               	if (option_counter > 0) {
+               		message += "options = " + $('#opt_0').val()+"="+$('#val_0').val();
+               	}
+               	for (var i=1; i<option_counter; i++) {
+               		message += "&"+$('#opt_'+i).val()+"="+$('#val_'+i).val();
+               	}
+               	
+               	if (confirm("MESSAGE:\n"+message)) {
+               		sendAsyncRequest("POST", push_simulation_app + "/tasks", message, function(xmlhttp) {
+               			updateSelect();
+               		});
+               	}
+               }
+               
+               function updateCreateButton() {
+               	var resid = $('#resid_input').val();
+               	var device = $('#device_input').val();
+               	if (!(resid=="") && !(device=="")) {
+               		$('#create_push_simulation').removeAttr('disabled');
+               	} else {
+               		$('#create_push_simulation').attr('disabled', 'disabled');
+               	}
+               }
+               
+            </script>
+            <h3>Create New</h3>
+            <p>
+               Use this template to create a new push simulation.
+            </p>
+            <table border="2" class="input_template">
+               <tr>
+                  <td>resid = </td>
+                  <td><input id="resid_input" type="text" onchange="onResidChange(this);" size="10" value="" /></td>
+               </tr>
+               <tr>
+                  <td>source = </td>
+                  <td><span>coap://</span><input id="device_input" type="text" onchange="onDeviceChange(this);" size="75" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>poll = </td>
+                  <td><input id="poll_input" type="text" onchange="onPollChange(this);" size="10" value="" /></td>
+               </tr>
+               <tr>
+                  <td>options = </td>
+                  <td>
+                     <div id="options_input">
+                        <span style="margin-bottom: 20px; padding: 10px">Add / Remove Elements:</span><br />
+                        <input id="add_button" type="button" onclick="onClickAdd();" value="Add" style="margin-left: 10px" />
+                        <input id="remove_button" type="button" onclick="onClickRemove();" value="Remove" style="float: right; margin-right: 10px" /><br />
+                        <div id="set_options"></div>
+                     </div>
+                  </td>
+               </tr>
+               <tr>
+                  <td colspan="2"><input id="create_push_simulation" type="button" onclick="onCreate();" value="Create Push Simulation" /></td>
+               </tr>
+            </table>
+            <script>
+               function updateFields(task) {
+                 $('#task_device').val(sendRequest("GET", push_simulation_app + "/tasks/" + task + "/source"));
+               $('#task_options').val(sendRequest("GET", push_simulation_app + "/tasks/" + task + "/options"));
+               $('#task_poll').val(sendRequest("GET", push_simulation_app + "/tasks/" + task + "/poll"));
+               $('#task_value').val(sendRequest("GET", push_simulation_app + "/tasks/" + task + "/value"));
+               }
+               
+               function onTaskSelect(thisSelect) {
+               var task = thisSelect[thisSelect.selectedIndex].value;
+               updateFields(task);
+               }
+               
+               function onDeleteTask() {
+               var task = $('#task_select').val();
+               if (confirm("Delete task: " + task)) {
+               sendAsyncRequest("DELETE", push_simulation_app + "/tasks/" + task, "", function(xmlhttp) {
+               updateSelect();
+               });
+               
+               $('#task_device').val("");
+               $('#task_options').val("");
+               $('#task_poll').val("");
+               $('#task_value').val("");
+               }
+               }
+               
+               function onClickChangePoll() {
+               var change_val = $('#task_poll').val();
+               if (confirm("Change Poll to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", push_simulation_app + "/tasks/" + task + "/poll", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               
+               }
+            </script>
+            <h3>Tasks</h3>
+            <p>
+               The push simulation tasks.
+            </p>
+            <div class="tasks">
+               <span>
+                  <select id="task_select" onChange="onTaskSelect(this);" size="6" multiple></select>
+                  <table border="2" class="input_table">
+                     <tr>
+                        <td>
+                           <input type="button" onclick="onDeleteTask();" value="Delete Task" />
+                        </td>
+                        <td>
+                           Delete the selected task.
+                        </td>
+                     </tr>
+                  </table>
+               </span>
+               <table class="tasks_bottom">
+                  <tr>
+                     <td>Source:</td>
+                     <td><input id="task_device" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Options:</td>
+                     <td><input id="task_options" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Poll:</td>
+                     <td><input id="task_poll" onchange="onPollChange(this);" type="text" size="70" /></td>
+                     <td><input type="button" onclick="onClickChangePoll();" value="Change" /></td>
+                  </tr>
+                  <tr>
+                     <td>Value:</td>
+                     <td><input id="task_value" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+               </table>
+            </div>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_timed_request.html">Timed Action</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+               <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Apps - Control Loop</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps_control_loop.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var APP_NAME = "control_loop";
+         
+         var config_apps = "coap://localhost:5685/apps/appconfigs";
+         var running_apps = "coap://localhost:5685/apps/running";
+         var installed_apps = "coap://localhost:5685/install";
+         var control_loop_app = "coap://localhost:5685/apps/running/" + APP_NAME;
+         
+         function isInstalled(installedApps) {
+         	var installedAppsArray = installedApps.split("\n");
+         		for (var el in installedAppsArray) {
+         		    if (installedAppsArray[el]==APP_NAME)
+             	return true;
+         	}
+         	return false;
+         }
+         	
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         	sendAsyncRequest("GET", running_apps, "", function(xmlhttp) {
+         		if (isInstalled(xmlhttp.responseText)) {
+         			$('#install_button').val("Uninstall");
+         			$('#start_button').removeAttr('disabled');
+         		} else {
+         			$('#install_button').val("Install");
+         			$('#start_button').attr('disabled', 'disabled');
+         		}
+         	});
+         		
+         	updateCreateButton();
+         		
+         	updateSelect();
+         });
+         
+         function updateSelect() {	  
+         	$('.tasks select').empty();
+         	sendAsyncRequest("GET", control_loop_app + "/tasks", "", function(xmlhttp) {
+         		$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+         			if (value!="") {
+         				$('.tasks select')
+         					.append($("<option></option>")
+         						.attr("value",value)
+         						.text(value));
+         			}
+         		});
+         	});
+            }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Control Loop</h1>
+            <p>
+               The conrol loop app implements a simple parametrizable control loop.
+               The value is read from one source resource, then possibly altered to some new value, and finally sent to a target resource. For the altering mechanism a set of predefined functions are available.
+               In addition the user can choose to set a decision function which allows simple if-then-else branching for the modification.
+            </p>
+            <h2>Create New Control Loop</h2>
+            <p>
+               Use the input template to create a new control loop.
+            </p>
+            <h3>Interface</h3>
+            <h4>Payload</h4>
+            <ul>
+               <li>resid: defines the resource name.</li>
+               <li>source: is the source device for the control loop.</li>
+               <li>target: is the target device for the control loop.</li>
+               <li>targetoperation: is the target operation (post / put / delete).</li>
+               <li>decisionfunc: lets you define a predefined function for the decision.</li>
+               <li>modifyfunc: lets you define a predefined function for the modification.</li>
+               <li>modifyelsefunc: lets you define a predefined function for the modification if the decision function returns false.</li>
+            </ul>
+            <script>
+               function onInstall_Uninstall(input) {
+               	if (input.value=="Install") {
+               		sendAsyncRequest("POST", installed_apps + "/" + APP_NAME, "name = " + APP_NAME, function(xmlhttp) {
+               			input.value = "Uninstall";
+               		});
+               	} else { // input.value=="Uninstall"
+               		sendAsyncRequest("DELETE", config_apps + "/" + APP_NAME, "", function(xmlhttp) {
+               			input.value = "Install";
+               			updateSelect();
+               		});
+               	}
+               }
+            </script>
+            <h3>Main Control</h3>
+            <table border="2" class="nav_input_table">
+               <tr>
+                  <td>
+                     <input id="install_button" type="button" name="install_Button" onClick="onInstall_Uninstall(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Install / Uninstall (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onResidChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onSourceChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onTargetChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               	
+               function onTargetOperationChange(input) {}
+               	
+                              var value_dec = "value_dec";
+               var own_function_dec = "own_function_dec";
+               
+               function onDecisionFuncChange(input) {
+               	var func = input[input.selectedIndex].value;
+               	if (func=="equal" || func=="notequal" || func=="greater" || func=="greaterequal" || func=="less" || func=="lessequal" || func=="contains" || func=="prefix" || func=="suffix") {
+               		$('#decisionfunc_input').html(
+               			"<span>Define the Value:</span><br />" +
+               			"<span>Value: </span><input id=" + value_dec + " type='text' size='20' value='0' style='margin-left: 10px'/>"
+               		);
+               		$('#decisionfunc_input').css('margin-right', '160px');
+               		$('#decisionfunc_input').show();
+               	} else if (func=="own") {
+               		$('#decisionfunc_input').html(
+               			"<span style:>var storage = new Array();</span><br />" +
+               			"<span>function decision_func(value) {</span><br />" +
+               			"<span style='margin-left: 20px'>if ( <input id='" + own_function_dec + "' size='33' style='margin-left: 5px'/> ) return true;<br />" +
+               			"<span style='margin-left: 20px'>else return false;</span><br />" +
+               			"<span>}</span>"
+               		);
+               		$('#decisionfunc_input').css('margin-right', '0px');
+               		$('#decisionfunc_input').show();
+               	} else {
+               		$('#decisionfunc_input').hide();
+               	}
+               	updateCreateButton();
+               }
+               
+               var value_mod = "value_mod";
+               var own_function_mod = "own_function_mod";
+               
+               function onModifyFuncChange(input) {
+               	var func = input[input.selectedIndex].value;
+               	if (func=="add" || func=="subtract" || func=="multiply" || func=="divide" || func=="modulo" || func=="prefix" || func=="suffix") {
+               		$('#modifyfunc_input').html(
+               			"<span>Define the Value:</span><br />" +
+               			"<span>Value: </span><input id=" + value_mod + " type='text' size='20' value='0' style='margin-left: 10px'/>"
+               		);
+               		$('#modifyfunc_input').css('margin-right', '160px');
+               		$('#modifyfunc_input').show();
+               	} else if (func=="own") {
+               		$('#modifyfunc_input').html(
+               			"<span style:>var storage = new Array();</span><br />" +
+               			"<span>function modify_func(value) {</span><br />" +
+               			"<textarea id='" + own_function_mod + "' rows='8' cols='41' style='margin-left: 20px'></textarea><br />" +
+               			"<span style='margin-left: 20px'>return ret;</span><br />" +
+               			"<span>}</span>"
+               		);
+               		$('#modifyfunc_input').css('margin-right', '0px');
+               		$('#modifyfunc_input').show();
+               	} else { // func=={sum | avg | max | min}
+               		$('#modifyfunc_input').hide();
+               	}
+               	updateCreateButton();
+               }
+               
+               var value_modelse = "value_modelse";
+               var own_function_modelse = "own_function_modelse";
+               
+               function onModifyElseFuncChange(input) {
+               	var func = input[input.selectedIndex].value;
+               	if (func=="add" || func=="subtract" || func=="multiply" || func=="divide" || func=="modulo" || func=="prefix" || func=="suffix") {
+               		$('#modifyelsefunc_input').html(
+               			"<span>Define the Value:</span><br />" +
+               			"<span>Value: </span><input id=" + value_modelse + " type='text' size='20' value='0' style='margin-left: 10px'/>"
+               		);
+               		$('#modifyelsefunc_input').css('margin-right', '160px');
+               		$('#modifyelsefunc_input').show();
+               	} else if (func=="own") {
+               		$('#modifyelsefunc_input').html(
+               			"<span>function modify_func(value) {</span><br />" +
+               			"<textarea id='" + own_function_modelse + "' rows='8' cols='41' style='margin-left: 20px'></textarea><br />" +
+               			"<span style='margin-left: 20px'>return ret;</span><br />" +
+               			"<span>}</span>"
+               		);
+               		$('#modifyelsefunc_input').css('margin-right', '0px');
+               		$('#modifyelsefunc_input').show();
+               	} else { // func=={sum | avg | max | min}
+               		$('#modifyelsefunc_input').hide();
+               	}
+               	updateCreateButton();
+               }
+               
+               function onCreate() {
+               	var resid = $('#resid_input').val();
+               	var source = "coap://" + $('#source_input').val();
+               	var target = "coap://" + $('#target_input').val();
+               	var targetoperation = $('#targetoperation_select').val();
+               	var decisionfunc = $('#decisionfunc_select').val();
+               	var modifyfunc = $('#modifyfunc_select').val();
+               	var modifyelsefunc = $('#modifyelsefunc_select').val();
+               	
+               	var message = "resid = " + resid + "\n";
+               	message += "source = " + source + "\n";
+               	message += "target = " + target + "\n";
+               	message += "targetoperation = " + targetoperation + "\n";
+                                  
+               	if (decisionfunc=="equal" || decisionfunc=="notequal" || decisionfunc=="greater" || decisionfunc=="greaterequal" || decisionfunc=="less" || decisionfunc=="lessequal" || decisionfunc=="contains" || decisionfunc=="prefix" || decisionfunc=="suffix") {
+               		message += "decisionfunc = " + decisionfunc + ";;" + $('#'+value_dec).val() + "\n";
+               	} else if (decisionfunc=="own") {
+               		message += "decisionfunc = " + decisionfunc + ";;" + $('#'+own_function_dec).val() + ";;\n";
+               	}
+               
+               	if (modifyfunc=="sum" || modifyfunc=="avg" || modifyfunc=="max" || modifyfunc=="min") {
+               		message += "modifyfunc = " + modifyfunc + "\n";
+               	} else if (modifyfunc=="add" || modifyfunc=="subtract" || modifyfunc=="multiply" || modifyfunc=="divide" || modifyfunc=="modulo" || modifyfunc=="prefix" || modifyfunc=="suffix") {
+               		message += "modifyfunc = " + modifyfunc + ";;" + $('#'+value_mod).val() + "\n";
+               	} else if (modifyfunc=="own") {
+               		message += "modifyfunc = " + modifyfunc + ";;" + $('#'+own_function_mod).val() + ";;\n";
+               	}
+               
+               	if (modifyelsefunc=="sum" || modifyelsefunc=="avg" || modifyelsefunc=="max" || modifyelsefunc=="min") {
+               		message += "modifyfuncelse = " + modifyelsefunc + "\n";
+               	} else if (modifyelsefunc=="add" || modifyelsefunc=="subtract" || modifyelsefunc=="multiply" || modifyelsefunc=="divide" || modifyelsefunc=="modulo" || modifyelsefunc=="prefix" || modifyelsefunc=="suffix") {
+               		message += "modifyfuncelse = " + modifyelsefunc + ";;" + $('#'+value_modelse).val();
+               	} else if (modifyfunc=="own") {
+               		message += "modifyfuncelse = " + modifyelsefunc + ";;" + $('#'+own_function_modelse).val() + ";;";
+               	}
+               
+               	if (confirm("MESSAGE:\n"+message)) {
+               		sendAsyncRequest("POST", control_loop_app + "/tasks", message, function(xmlhttp) {
+               			updateSelect();
+               		});
+               	}
+               }
+               
+               function updateCreateButton() {
+               	var resid = $('#resid_input').val();
+               	var source = $('#source_input').val();
+               	var target = $('#target_input').val();
+               	var targetoperation = $('#targetoperation_input').val();
+               	if (!(resid=="") && !(source=="") && !(target=="") && !(targetoperation=="")) {
+               		$('#create_control_loop_task').removeAttr('disabled');
+               	} else {
+               		$('#create_control_loop_task').attr('disabled', 'disabled');
+               	}
+               }
+            </script>
+            <h3>Create New</h3>
+            <p>
+               Use this template to create a new control loop task.
+            </p>
+            <table border="2" class="input_template">
+               <tr>
+                  <td>resid = </td>
+                  <td><input id="resid_input" type="text" onchange="onResidChange(this);" size="10" value="" /></td>
+               </tr>
+               <tr>
+                  <td>source = </td>
+                  <td><span>coap://</span><input id="source_input" type="text" onchange="onSourceChange(this);" size="70" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>target = </td>
+                  <td><span>coap://</span><input id="target_input" type="text" onchange="onTargetChange(this);" size="70" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>targetoperation = </td>
+                  <td>
+                     <select id="targetoperation_select">
+                        <option selected="selected" value="PUT">PUT</option>
+                        <option value="PUT">POST</option>
+                        <option value="PUT">DELETE</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>decisionfunc = </td>
+                  <td>
+                     <div id="decisionfunc_input"></div>
+                     <select id="decisionfunc_select" onchange="onDecisionFuncChange(this);">
+                        <option selected="selected" value=""></option>
+                        <option value="equal">Equal</option>
+                        <option value="notequal">Not Equal</option>
+                        <option value="greater">Greater</option>
+                        <option value="greaterequal">Greater Equal</option>
+                        <option value="less">Less</option>
+                        <option value="lessequal">Less Equal</option>
+                        <option value="contains">Contains</option>
+                        <option value="prefix">Prefix</option>
+                        <option value="suffix">Suffix</option>
+                        <option value="own">Own</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>modifyfunc = </td>
+                  <td>
+                     <div id="modifyfunc_input"></div>
+                     <select id="modifyfunc_select" onchange="onModifyFuncChange(this);">
+                        <option selected="selected" value="none">None</option>
+                        <option value="sum">Sum</option>
+                        <option value="avg">Average</option>
+                        <option value="max">Maximum</option>
+                        <option value="min">Minimum</option>
+                        <option value="add">Add</option>
+                        <option value="subtract">Subtract</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="divide">Divide</option>
+                        <option value="modulo">Modulo</option>
+                        <option value="prefix">Prefix</option>
+                        <option value="suffix">Suffix</option>
+                        <option value="own">Own</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>modifyelsefunc = </td>
+                  <td>
+                     <div id="modifyelsefunc_input"></div>
+                     <select id="modifyelsefunc_select" onchange="onModifyElseFuncChange(this);">
+                        <option selected="selected" value=""></option>
+                        <option value="none">None</option>
+                        <option value="sum">Sum</option>
+                        <option value="avg">Average</option>
+                        <option value="max">Maximum</option>
+                        <option value="min">Minimum</option>
+                        <option value="add">Add</option>
+                        <option value="subtract">Subtract</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="divide">Divide</option>
+                        <option value="modulo">Modulo</option>
+                        <option value="prefix">Prefix</option>
+                        <option value="suffix">Suffix</option>
+                        <option value="own">Own</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td colspan="2"><input id="create_control_loop_task" type="button" onclick="onCreate();" value="Create Control Loop Task" /></td>
+               </tr>
+            </table>
+            <!-- Tasks -->
+            <script>
+               function updateFields(task) {
+                 $('#task_source').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/source"));
+               $('#task_target').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/target"));						
+               $('#task_targetoperation').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/targetoperation"));
+               $('#task_output').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/output"));
+                 $('#task_decisionfunc').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/decisionfunc"));
+               $('#task_modifyfunc').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/modifyfunc"));
+               $('#task_modifyelsefunc').val(sendRequest("GET", control_loop_app + "/tasks/" + task + "/modifyfuncelse"));
+               }
+               
+               function onTaskSelect(thisSelect) {
+               var task = thisSelect[thisSelect.selectedIndex].value;
+                 updateFields(task);
+               }
+               
+               function onDeleteTask() {
+               var task = $('#task_select').val();
+               if (confirm("Delete task: " + task)) {
+               sendAsyncRequest("DELETE", control_loop_app + "/tasks/" + task, "", function(xmlhttp) {
+               updateSelect();
+               });
+               
+               $('#task_source').val("");
+               $('#task_target').val("");						
+               $('#task_targetoperation').val("");
+                   $('#task_output').val("");
+               $('#task_decisionfunc').val("");
+               $('#task_modifyfunc').val("");
+               $('#task_modifyelsefunc').val("");
+               }
+               }
+                         
+               function onClickChangeDecisionfunc() {
+               var change_val = $('#task_decisionfunc').val();
+               if(confirm("Change Decision Function to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", control_loop_app + "/tasks/" + task + "/decisionfunc", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+               
+               function onClickChangeModifyfunc() {
+               var change_val = $('#task_modifyfunc').val();
+               if(confirm("Change Modify Function to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", control_loop_app + "/tasks/" + task + "/modifyfunc", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+                 
+               }
+               
+               function onClickChangeModifyElsefunc() {
+               var change_val = $('#task_modifyelsefunc').val();
+               if(confirm("Change Modify Else Function to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", control_loop_app + "/tasks/" + task + "/modifyfuncelse", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+            </script>
+            <h3>Tasks</h3>
+            <p>
+               The control loop tasks.
+            </p>
+            <div class="tasks">
+               <span>
+                  <select id="task_select" onChange="onTaskSelect(this);" size="6" multiple></select>
+                  <table border="2" class="input_table">
+                     <tr>
+                        <td>
+                           <input type="button" onclick="onDeleteTask();" value="Delete Task" />
+                        </td>
+                        <td>
+                           Delete the selected task.
+                        </td>
+                     </tr>
+                  </table>
+               </span>
+               <table class="tasks_bottom">
+                  <tr>
+                     <td>Device:</td>
+                     <td><input id="task_source" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Target:</td>
+                     <td><input id="task_target" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Targetoperation:</td>
+                     <td><input id="task_targetoperation" type="text" size="70" /></td>
+                  </tr>
+                  <tr>
+                     <td>Output:</td>
+                     <td><textarea id="task_output" rows="4" cols="55"></textarea></td>
+                  </tr>
+                  <tr>
+                     <td>Decisionfunc:</td>
+                     <td><textarea id="task_decisionfunc" rows="4" cols="55"></textarea></td>
+                     <td><input type="button" onclick="onClickChangeDecisionfunc();" value="Change" /></td>
+                  </tr>
+                  <tr>
+                     <td>Modifyfunc:</td>
+                     <td><textarea id="task_modifyfunc" rows="4" cols="55"></textarea></td>
+                     <td><input type="button" onclick="onClickChangeModifyfunc();" value="Change" /></td>
+                  </tr>
+                  <tr>
+                     <td>Modifyfuncelse:</td>
+                     <td><textarea id="task_modifyelsefunc" rows="4" cols="55"></textarea></td>
+                     <td><input type="button" onclick="onClickChangeModifyElsefunc();" value="Change" /></td>
+                  </tr>
+               </table>
+            </div>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_timed_request.html">Timed Action</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+               <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

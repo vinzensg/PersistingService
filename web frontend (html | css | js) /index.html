@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | HOME</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header_background">
+            <div id="header">
+               <div class="logo">
+                  <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+                  <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+                  </a>
+               </div>
+               <div class="banner">
+                  <img src="images/smart_thermostat.png" width="717px" height="120px" />
+               </div>
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Smart Thermostat</h1>
+            <p>
+               In order to evaluate the implemented modules and their assembly to application kernels, a smart thermostat application was implemented. To make the application more powerful yahoo's forecast is accessed through a web service.<br />
+               Not every module will be incorporated into the smart thermostat. Nevertheless it gives an idea on how to use them and makes it possible to infer usability issues. The final application is not a single closed project, but a collection of apps and modules running on the Actinium App Server. New features to the smart thermostat can easily be added through additional apps responsible for new functionality.<br />
+               The current implementation of the smart thermostat which is an assembly of three applications, incorporates three different application kernels. A first implementation using the {\bf data collection and visualization} kernel gathers temperature information from the internet and thermostats. A second collection of apps and modules controls different temperatures for day and night using the bf timed control mechanism. Ultimately, a third functionality prevents the indoor temperature to drop below some specified temperature by incorporating the control system application kernel.
+            </p>
+            <h2>General</h2>
+            <p>
+               The persisting service is used to gather temperature information from the thermostat and the yahoo forecast web service. The temperature data can be retrieved from the database and is visualized in a timeline graph. 
+            </p>
+            <h2>Day-Night</h2>
+            <p>
+               The day night control mechanism can be used to set different temperatures for the day time and the night time. The exact start and end times of the day can be set by the user. To make it more interesting, daily sunrise and sunset time are being integrated. When the day start time was set before the sunrise, the temperature will be increased to compensate the missing sun warmth. The same happens in the evening, when sunset is before day end.<br />
+               The new times to set the temperatures are evaluated every day at midnight. The {\bf timed action module} is used to host the resulting requests until they are supposed to be executed. A day night control app creates a new timed action for each temperature to set. Sunrise and sunset are fetched from the yahoo forecast app before initializing the timed actions. When multiple thermostats are operated using this day night control mechanism, the multicast module targets all of them.
+            </p>
+            <p>	
+               For demonstration purpose only, the temperature measured by the thermostat is stored in a database using the persisting service. In addition the persisting service also observes and stores the outdoor temperature and the times of sunrise and sunset.
+            </p>
+            <h2>Vacation</h2>
+            <p>
+               The third small application to prevent the temperature to drop below some minimum is implemented in the vacation control app. The user specifies a minimum and maximum temperature. To hold the temperature, an outdoor threshold temperature can be set to trigger an increase of heating indoors.
+               When the current outdoor temperature drops below the outdoor threshold, the maximum temperature is used to heat, otherwise the indoor temperature is kept at the minimum temperature. To make it more adaptive in case of a rapid outdoor temperature decrease, the forecast's minimum temperature is used. Whenever the forecast predicts a temperature below the outdoor threshold temperature, the indoor temperature is set to the middle temperature of the minimum and maximum. This way, whenever the forecast holds true, the time to heat to the maximum was reduced.<br />
+               The multiple aggregate module collects both the current and the forecast temperature from the yahoo forecast app. It passes the unchanged values to the {\bf control loop module} together with the source information. The control loop takes this information and decides on the new indoor temperature and sends it to the thermostat. Several thermostats can be controlled by sending the new indoor temperature to the multicast module, from where all the thermostats are targeted.
+            </p>
+            <p>	
+               In order to preserve a history for demonstration purpose only, the temperature changes, indoor temperature, the current outdoor temperature, and the forecast are recorded using the persisting service.
+            </p>
+         </div>
+         <div id="leftnav">
+            <h4>Links</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="http://www.vs.inf.ethz.ch/">ETH Distributed Systems Group</a></li>
+               <li><a href="http://people.inf.ethz.ch/mkovatsc/californium.php">Californium</a></li>
+               <li><a href="http://www.vs.inf.ethz.ch/edu/abstract.html?file=/home/webvs/www/htdocs/edu/theses/mkovatsc-smart-prototypes">Smart Household Appliances</a></li>
+               <li><a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">Wiki</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

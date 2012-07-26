@@ -1,0 +1,456 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Apps - Timed Action</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps_timed_request.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var APP_NAME = "timed_action";
+         
+         var config_apps = "coap://localhost:5685/apps/appconfigs";
+         var running_apps = "coap://localhost:5685/apps/running";
+         var installed_apps = "coap://localhost:5685/install";
+         var timed_request_app = "coap://localhost:5685/apps/running/" + APP_NAME;
+         
+         function isInstalled(installedApps) {
+         	var installedAppsArray = installedApps.split("\n");
+         		for (var el in installedAppsArray) {
+         		    if (installedAppsArray[el]==APP_NAME)
+             	return true;
+         	}
+         	return false;
+         }
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         	sendAsyncRequest("GET", running_apps, "", function(xmlhttp) {
+         		if (isInstalled(xmlhttp.responseText)) {
+         			$('#install_button').val("Uninstall");
+         			$('#start_button').removeAttr('disabled');
+         		} else {
+         			$('#install_button').val("Install");
+         			$('#start_button').attr('disabled', 'disabled');
+         		}
+         	});
+         	
+         	updateCreateButton();
+         	
+         	updateSelect();
+         	
+         	$('#datetime_input').html(
+         		"<span>Date: </span><input id=" + date_year + " type='text' size='4' onchange='onDateYearChange(this);' style='margin-left: 10px'/>" +
+         		"<input id=" + date_month + " type='text' size='2' onchange='onDateMonthChange(this);' style='margin-left: 5px'/>" +
+         		"<input id=" + date_day + " type='text' size='2' onchange='onDateDayChange(this);' style='margin-left: 5px'/>" +
+         		"<span style='margin-left: 30px'>Time: </span><input id=" + time_hour + " type='text' onchange='onTimeHourChange(this);' size='2' style='margin-left: 10px'/>" +
+         		"<input id=" + time_minute + " type='text' size='2' onchange='onTimeMinuteChange(this);' style='margin-left: 5px'/>" +
+         		"<input id=" + time_second + " type='text' size='2' onchange='onTimeSecondChange(this);' style='margin-left: 5px'/>"
+         	);
+         	$('#datetime_input').css('margin-right', '10px');
+         	$('#datetime_input').show();
+         });
+         
+         function updateSelect() {	  
+         	$('.tasks select').empty();
+         	sendAsyncRequest("GET", timed_request_app + "/tasks", "", function(xmlhttp) {
+         		$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+         			if (value!="") {
+         				$('.tasks select')
+         					.append($("<option></option>")
+         						.attr("value",value)
+         						.text(value));
+         			}
+         		});
+         	});
+            }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Timed Action</h1>
+            <p>
+               This app can be used to create timed actions.
+               A timed action has a specific time associated to it, which defines the time it will be executed.
+               The execution time can be specified through a date or a delay.
+               POST, PUT and DELETE actions are possible.
+            </p>
+            <h2>Create New Timed Action</h2>
+            <p>
+               Use the input template to create a new timed action.
+            </p>
+            <h3>Interface</h3>
+            <h4>Payload</h4>
+            <ul>
+               <li>resid: defines the resource name.</li>
+               <li>target: is the target device for the timed action.</li>
+               <li>operation: is the request operation (post / put / delete).</li>
+               <li>datetime: the date (time) the request should be exectued.</li>
+               <li>(payload: holds the payload for the timed action (is stronger than payloadfunc).</li>
+            </ul>
+            <script>
+               function onInstall_Uninstall(input) {
+               	if (input.value=="Install") {
+               		sendAsyncRequest("POST", installed_apps + "/" + APP_NAME, "name = " + APP_NAME, function(xmlhttp) {
+               			input.value = "Uninstall";
+               		});
+               	} else { // input.value=="Uninstall"
+               		sendAsyncRequest("DELETE", config_apps + "/" + APP_NAME, "", function(xmlhttp) {
+               			input.value = "Install";
+               			updateSelect();
+               		});
+               	}
+               }
+            </script>
+            <h3>Main Control</h3>
+            <table border="2" class="nav_input_table">
+               <tr>
+                  <td>
+                     <input id="install_button" type="button" name="install_Button" onClick="onInstall_Uninstall(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Install / Uninstall (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onResidChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onDeviceChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onOperationChange(input) {}
+               
+               function onDateYearChange(input) {
+               	removeChars(input);
+               	checkLength(input, 4);
+               	updateCreateButton();
+               }
+               
+               function onDateMonthChange(input) {
+               	removeChars(input);
+               	checkLength(input, 2);
+               	updateCreateButton();
+               }
+               
+               function onDateDayChange(input) {
+               	removeChars(input);
+               	checkLength(input, 2);
+               	updateCreateButton();
+               }
+               
+               function onTimeHourChange(input) {
+               	removeChars(input);
+               	checkLength(input, 2);
+               	updateCreateButton();
+               }
+               
+               function onTimeMinuteChange(input) {
+               	removeChars(input);
+               	checkLength(input, 2);
+               	updateCreateButton();
+               }
+               
+               function onTimeSecondChange(input) {
+               	removeChars(input);
+               	checkLength(input, 2);
+               	updateCreateButton();
+               }
+               
+               function removeChars(input) {
+               	var ret = "";
+               	var str = input.value.split(' ').join('');
+               	for (var el in str) {
+               		c = str.charAt(el);
+               		if (!isNaN(c))
+               			ret += c;
+               	}
+               	input.value = ret;
+               }
+               
+               function checkLength(input, num) {
+               	if (input.value.length > num) {
+               		input.value = input.value.substr(0,num);
+               	}
+               	while(input.value.length < num) {
+               		input.value = 0 + input.value;
+               	}
+               }
+               
+               var date_year = "date_year";
+               var date_month = "date_month";
+               var date_day = "date_day";
+               var time_hour = "time_hour";
+               var time_minute = "time_minute";
+               var time_second = "time_second";
+               
+               function onDateTimeChange(thisSelect) {
+               	var datetime = thisSelect[thisSelect.selectedIndex].value;
+               	if (datetime=="datetime") {
+               		$('#datetime_input').html(
+               			"<span>Date: </span><input id=" + date_year + " type='text' size='4' onchange='onDateYearChange(this);' style='margin-left: 10px'/>" +
+               			"<input id=" + date_month + " type='text' size='2' onchange='onDateMonthChange(this);' style='margin-left: 5px'/>" +
+               			"<input id=" + date_day + " type='text' size='2' onchange='onDateDayChange(this);' style='margin-left: 5px'/>" +
+               			"<span style='margin-left: 30px'>Time: </span><input id=" + time_hour + " type='text' size='2' onchange='onTimeHourChange(this);' style='margin-left: 10px'/>" +
+               			"<input id=" + time_minute + " type='text' size='2' onchange='onTimeMinuteChange(this);' style='margin-left: 5px'/>" +
+               			"<input id=" + time_second + " type='text' size='2' onchange='onTimeSecondChange(this);' style='margin-left: 5px'/>"
+               		);
+               		$('#datetime_input').css('margin-right', '10px');
+               		$('#datetime_input').show();
+               	} else if (datetime=="date") {
+               		$('#datetime_input').html(
+               			"<span>Date: </span><input id=" + date_year + " type='text' size='4' onchange='onDateYearChange(this);' style='margin-left: 10px'/>" +
+               			"<input id=" + date_month + " type='text' size='2' onchange='onDateMonthChange(this);' style='margin-left: 5px'/>" +
+               			"<input id=" + date_day + " type='text' size='2' onchange='onDateDayChange(this);' style='margin-left: 5px'/>"
+               		);
+               		$('#datetime_input').css('margin-right', '219px');
+               		$('#datetime_input').show();
+               	} else if (datetime=="time") {
+               		$('#datetime_input').html(
+               			"<span>Time: </span><input id=" + time_hour + " type='text' size='2' onchange='onTimeHourChange(this);'  style='margin-left: 10px'/>" +
+               			"<input id=" + time_minute + " type='text' size='2' onchange='onTimeMinuteChange(this);' style='margin-left: 5px'/>" +
+               			"<input id=" + time_second + " type='text' size='2' onchange='onTimeSecondChange(this);' style='margin-left: 5px'/>"
+               		);
+               		$('#datetime_input').css('margin-right', '229px');
+               		$('#datetime_input').show();
+               	}
+               }
+               
+               function onPayloadChange(input) {
+               	updateCreateButton();
+               }
+               
+               function onCreate() {
+               	var resid = $('#resid_input').val();
+               	var device = "coap://" + $('#device_input').val();
+               	var operation = $('#operation_select').val();
+               	var datetime = $('#datetime_select').val();
+               	var payload = $('#payload_input').val();
+               	
+               	var message = "resid = " + resid + "\n";
+               	message += "target = " + device + "\n";
+               	message += "operation = " + operation + "\n";
+               	if (payload != "") message += "payload = " + payload + "\n";
+               	if (datetime=="datetime") {
+               		message += "datetime = " + $('#'+date_year).val()+"/"+$('#'+date_month).val()+"/"+$('#'+date_day).val()+"-"+$('#'+time_hour).val()+":"+$('#'+time_minute).val()+":"+$('#'+time_second).val();
+               	} else if (datetime=="date") {
+               		message += "datetime = " + $('#'+date_year).val()+"/"+$('#'+date_month).val()+"/"+$('#'+date_day).val();
+               	} else if (datetime=="time") {
+               		message += "datetime = " + $('#'+time_hour).val()+":"+$('#'+time_minute).val()+":"+$('#'+time_second).val();
+               	}
+               	if (confirm("MESSAGE:\n"+message)) {
+               		sendAsyncRequest("POST", timed_request_app + "/tasks", message, function(xmlhttp) {
+               			updateSelect();
+               		});
+               	}
+               }
+               
+               function updateCreateButton() {
+               	var resid = $('#resid_input').val();
+               	var device = $('#device_input').val();
+               	var datetime = $('#datetime_select').val();
+               	if (!(resid=="") && !(device=="") &&
+               		((datetime=="datetime" && !($('#date_year').val()=="") && !($('#date_month').val()=="") && !($('#date_day').val()=="") && !($('#time_hour').val()=="") && !($('#time_minute').val()=="") && !($('#time_second').val()==""))) ||
+               		((datetime=="date" && !($('#date_year').val()=="") && !($('#date_month').val()=="") && !($('#date_day').val()==""))) ||
+               		((datetime=="time" && !($('#time_hour').val()=="") && !($('#time_minute').val()=="") && !($('#time_second').val()=="")))
+               		) {
+               		$('#create_timed_task').removeAttr('disabled');
+               	} else {
+               		$('#create_timed_task').attr('disabled', 'disabled');
+               	}
+               }
+               
+            </script>
+            <h3>Create New</h3>
+            <p>
+               Use this template to create a new timed action.
+            </p>
+            <table border="2" class="input_template">
+               <tr>
+                  <td>resid = </td>
+                  <td><input id="resid_input" type="text" onchange="onResidChange(this);" size="10" value="" /></td>
+               </tr>
+               <tr>
+                  <td>target = </td>
+                  <td><span>coap://</span><input id="device_input" type="text" onchange="onDeviceChange(this);" size="75" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>operation = </td>
+                  <td>
+                     <select id="operation_select">
+                        <option selected="selected" value"PUT">PUT</option>
+                        <option value"PUT">POST</option>
+                        <option value"PUT">DELETE</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>datetime = </td>
+                  <td>
+                     <div id="datetime_input"></div>
+                     <select id="datetime_select" onchange="onDateTimeChange(this)">
+                        <option selected="selected" value="datetime">Date - Time</option>
+                        <option value="date">Date</option>
+                        <option value="time">Time</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>payload = </td>
+                  <td><textarea id="payload_input" onchange="onPayloadChange(this);" cols="65" rows="5" wrap="off"></textarea></td>
+               </tr>
+               <tr>
+                  <td colspan="2"><input id="create_timed_task" type="button" onclick="onCreate();" value="Create Timed Action" /></td>
+               </tr>
+            </table>
+            <script>
+               function updateFields(task) {
+                 $('#task_device').val(sendRequest("GET", timed_request_app + "/tasks/" + task + "/target"));
+               $('#task_operation').val(sendRequest("GET", timed_request_app + "/tasks/" + task + "/operation"));
+               $('#task_datetime').val(sendRequest("GET", timed_request_app + "/tasks/" + task + "/datetime"));
+               $('#task_payload').val(sendRequest("GET", timed_request_app + "/tasks/" + task + "/payload"));
+               }
+               
+               function onTaskSelect(thisSelect) {
+               var task = thisSelect[thisSelect.selectedIndex].value;
+               updateFields(task);
+               }
+               
+               function onDeleteTask() {
+               var task = $('#task_select').val();
+               if (confirm("Delete task: " + task)) {
+               sendAsyncRequest("DELETE", timed_request_app + "/tasks/" + task, "", function(xmlhttp) {
+               updateSelect();
+               });
+               }
+               
+               $('#task_device').val("");
+               $('#task_operation').val("");
+               $('#task_datetime').val("");
+               $('#task_payload').val("");
+               }
+               
+               function onClickChangeDatetime() {
+               var change_val = $('#task_datetime').val();
+               if(confirm("Change DateTime to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", timed_request_app + "/tasks/" + task + "/datetime", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+               
+               function onClickChangePayload() {
+               var change_val = $('#task_payload').val();
+               if(confirm("Change Payload to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", timed_request_app + "/tasks/" + task + "/payload", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+            </script>
+            <h3>Tasks</h3>
+            <p>
+               The timed action tasks.
+            </p>
+            <div class="tasks">
+               <span>
+                  <select id="task_select" onChange="onTaskSelect(this);" size="6" multiple></select>
+                  <table border="2" class="input_table">
+                     <tr>
+                        <td>
+                           <input type="button" onclick="onDeleteTask();" value="Delete Task" />
+                        </td>
+                        <td>
+                           Delete the selected task.
+                        </td>
+                     </tr>
+                  </table>
+               </span>
+               <div>
+                  <table class="tasks_bottom">
+                     <tr>
+                        <td>Target:</td>
+                        <td><input id="task_device" type="text" size="70" readonly="readonly" /></td>
+                     </tr>
+                     <tr>
+                        <td>Operation:</td>
+                        <td><input id="task_operation" type="text" size="70" readonly="readonly" /></td>
+                     </tr>
+                     <tr>
+                        <td>DateTime:</td>
+                        <td><input id="task_datetime" type="text" size="70" /></td>
+                        <td><input type="button" onclick="onClickChangeDatetime();" value="Change" /></td>
+                     </tr>
+                     <tr>
+                        <td>Payload:</td>
+                        <td><textarea id="task_payload" rows="4" cols="55"></textarea></td>
+                        <td><input type="button" onclick="onClickChangePayload();" value="Change" /></td>
+                     </tr>
+                  </table>
+               </div>
+            </div>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_timed_request.html">Timed Action</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+               <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

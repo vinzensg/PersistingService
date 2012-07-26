@@ -1,0 +1,423 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | General</title>
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_general.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var GENERAL_OUTDOOR_TEMPERATURE = "general_outdoor_temperature";
+         var GENERAL_INDOOR_TEMPERATURE = "general_indoor_temperature";
+         var GENERAL_FORECAST_HIGH_TEMPERATURE = "general_forecast_high_temperature";
+         var GENERAL_FORECAST_LOW_TEMPERATURE = "genreal_forecast_low_temperature";
+         
+         var option_translation = "coap://localhost:5685/apps/running/option_translation";
+         
+         var persisting_service = "coap://localhost:5684/persistingservice/tasks";
+         var thermostat_target = "coap://localhost:5685/apps/running/thermostat_simulation";
+         var weather_target = "coap://localhost:5685/apps/running/weather";
+         
+         function isCreatedHistory(hist) {
+             var existingRes = sendRequest("GET", persisting_service+"/general").split("\n");
+             if ($.inArray(hist, existingRes)!=-1) {
+                 return true;
+             }
+             return false;
+         }
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+             if(isCreatedHistory(GENERAL_INDOOR_TEMPERATURE)) {
+                 $('#createIndoorHistory_button').val("Remove");
+                 $('#startIndoorHistory_button').removeAttr('disabled');
+             } else {
+                 $('#createIndoorHistory_button').val("Create");
+                 $('#startIndoorHistory_button').attr('disabled', 'disabled');
+             }
+              
+             if(sendRequest("GET", persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/running")=="true") {
+                 $('#startIndoorHistory_button').val("Stop");
+             } else {
+                 $('#startIndoorHistory_button').val("Start");
+             }
+             
+             if(isCreatedHistory(GENERAL_OUTDOOR_TEMPERATURE)) {
+                 $('#createOutdoorHistory_button').val("Remove");
+                 $('#startOutdoorHistory_button').removeAttr('disabled');
+             } else {
+                 $('#createOutdoorHistory_button').val("Create");
+                 $('#startOutdoorHistory_button').attr('disabled', 'disabled');
+             }
+              
+             if(sendRequest("GET", persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/running")=="true") {
+                 $('#startOutdoorHistory_button').val("Stop");
+             } else {
+                 $('#startOutdoorHistory_button').val("Start");
+             }
+             
+             if(isCreatedHistory(GENERAL_FORECAST_HIGH_TEMPERATURE) && isCreatedHistory(GENERAL_FORECAST_LOW_TEMPERATURE)) {
+                 $('#createForecastHistory_button').val("Remove");
+                 $('#startForecastHistory_button').removeAttr('disabled');
+             } else {
+                 $('#createForecastHistory_button').val("Create");
+                 $('#startForecastHistory_button').attr('disabled', 'disabled');
+             }
+              
+             if(sendRequest("GET", persisting_service + "/general/" + GENERAL_FORECAST_HIGH_TEMPERATURE + "/running")=="true" && sendRequest("GET", persisting_service + "/" + GENERAL_FORECAST_LOW_TEMPERATURE + "/running")=="true") {
+                 $('#startForecastHistory_button').val("Stop");
+             } else {
+                 $('#startForecastHistory_button').val("Start");
+             }
+             
+             updateAggregates();
+         });
+             
+         function updateAggregates() {
+             var day_sub = $('#day_range_text').val();
+             var date = new Date();
+             date.setDate(date.getDate() - day_sub);
+                 
+             $('#outdoor_average').html("Average: " + parseFloat(sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/history/since/avg?weighted=true&date=" + dateToString(date))).toFixed(1));
+             $('#outdoor_max').html("Max: " + parseFloat(sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/history/since/max?date=" + dateToString(date))).toFixed(1));
+             $('#outdoor_min').html("Min: " + parseFloat(sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/history/since/min?date=" + dateToString(date))).toFixed(1));
+                 
+             $('#indoor_average').html("Average: " + parseFloat(sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/history/since/avg?weighted=true&date=" + dateToString(date))).toFixed(1));
+             $('#indoor_max').html("Max: " + parseFloat(sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/history/since/max?date=" + dateToString(date))).toFixed(1));
+             $('#indoor_min').html("Min: " + parseFloat(sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/history/since/min?date=" + dateToString(date))).toFixed(1));
+         }
+      </script>
+      <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+      <script type="text/javascript">
+         google.load('visualization', '1', {'packages':['annotatedtimeline']});
+         google.setOnLoadCallback(drawChart);
+         function drawChart() {
+             var day_sub = $('#day_range_text').val();
+             var date = new Date();
+             date.setDate(date.getDate() - day_sub);
+             
+             var history_data_array = new Array();
+             var value_date = null;
+             
+             var indoor_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+             indoor_data_array.pop();
+             for (var el in indoor_data_array) {
+                 value_date = indoor_data_array[el].split(';');
+                 history_data_array.push([dateFromString(value_date[1]), parseFloat(value_date[0]), null, null, null]);
+             }
+             
+             var outdoor_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+             outdoor_data_array.pop();
+             for (var el in outdoor_data_array) {
+                 value_date = outdoor_data_array[el].split(';');
+                 history_data_array.push([dateFromString(value_date[1]), null, parseFloat(value_date[0]), null, null]);
+             }
+              
+             var forecast_high_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_FORECAST_HIGH_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+             forecast_high_data_array.pop();
+             for (var el in forecast_high_data_array) {
+                 value_date = forecast_high_data_array[el].split(';');
+                 history_data_array.push([dateFromString(value_date[1]), null, null, parseFloat(value_date[0]), null]);
+             }
+             
+             var forecast_low_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service + "/general/" + GENERAL_FORECAST_LOW_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+             forecast_low_data_array.pop();
+             for (var el in forecast_low_data_array) {
+                 value_date = forecast_low_data_array[el].split(';');
+                 history_data_array.push([dateFromString(value_date[1]), null, null, null, parseFloat(value_date[0])]);
+             }
+              
+             var data = new google.visualization.DataTable();
+             data.addColumn('date', 'Date');
+             data.addColumn('number', 'Indoor Temperature');
+             data.addColumn('number', 'Outdoor Temperature');
+             data.addColumn('number', 'Forecast High');
+             data.addColumn('number', 'Forecast Low');
+         
+             data.addRows(history_data_array);
+              
+             var chart = new google.visualization.AnnotatedTimeLine(document.getElementById('general_chart'));
+             chart.draw(data, {displayAnnotations: true, annotationsWidth: 15, displayRangeSelector: false, dateFormat: 'HH:mm MMMM dd, yyyy'});
+         
+             updateAggregates();
+         }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div class="description_text">
+            <h1>General History</h1>
+            <p>
+               The general history displays the temperature recorded outdoors and indoors for the last couple of days.
+               All the data is requested from the persisting service running on a suitable household appliance.
+            </p>
+            <h2>Outdoor Temperature</h2>
+            <p>
+               The outdoor temperature is being accessed by a javascript weather-app running on the Actium App Server.
+               This app periodically checks fetches the weather data from <a href="http://developer.yahoo.com/weather/">the yahoo api</a>.
+               The persisting service then requests the data from this weather-app and stores it in its database.
+            </p>
+            <h2>Indoor Temperature</h2>
+            <p>
+               The indoor temperature comes directly from the thermostat.
+               The persisting service observes the temperature resource and stores the data in its database.
+            </p>
+            <h2>History</h2>
+            <p>
+               The history of the temperatures.
+            </p>
+            <h3>Indoor Temperature</h3>
+            <p>
+               This persisting resource records the indoor temperature.
+            </p>
+            <script>
+               function onCreateIndoorHistory(button) {
+                   if(button.value=="Create") {
+                       var payload = "topid = general\n" +
+                                     "resid = " + GENERAL_INDOOR_TEMPERATURE + "\n" +
+                                     "deviceroot = " + thermostat_target + "\n" +
+                                     "deviceres = /temperature\n" +
+                                     "type = number";
+                       sendAsyncRequest("POST", persisting_service, payload, function (xmlhttp) {
+                         drawChart();
+                       });
+                       button.value="Remove";
+                       $('#startIndoorHistory_button').removeAttr('disabled');
+                   } else { //button.value=="Remove"
+                       sendRequest("DELETE", persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE);
+                       button.value="Create";
+                       $('#startIndoorHistory_button').val("Start");
+                       $('#startIndoorHistory_button').attr('disabled', 'disabled');
+                   }
+                      
+               }
+                
+               function onStart_StopIndoorHistory(button) {
+                   if(button.value=="Start") {
+                       sendAsyncRequest("PUT", persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/running", "true", function (xmlhttp) {
+                         drawChart();
+                       });
+                       button.value="Stop";
+                   } else { //button.value=="Stop"
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_INDOOR_TEMPERATURE + "/running", "false", function(xmlhttp) {
+                         drawChart();
+                       });
+                       button.value="Start";
+                   }
+               }
+            </script>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="createIndoorHistory_button" type="button" onClick="onCreateIndoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Create / Remove a persisting resource for the indoor temperature.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="startIndoorHistory_button" type="button" onClick="onStart_StopIndoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop collecting history data for the indoor temperature.	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <h3>Outdoor Temperature</h3>
+            <p>
+               This persisting resource records the outdoor temperature.
+            </p>
+            <script>
+               function onCreateOutdoorHistory(button) {
+                   if(button.value=="Create") {
+                       var payload = "topid = general\n" +
+                                     "resid = " + GENERAL_OUTDOOR_TEMPERATURE + "\n" +
+                                     "deviceroot = " + weather_target + "\n" +
+                                     "deviceres = /now/temperature\n" +
+                                     "type = number";
+                       sendAsyncRequest("POST", persisting_service, payload, function (xmlhttp) {
+                         drawChart();
+                       });
+                       button.value="Remove";
+                       $('#startOutdoorHistory_button').removeAttr('disabled');
+                   } else { //button.value=="Remove"
+                       sendRequest("DELETE", persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE);
+                       button.value="Create";
+                       $('#startOutdoorHistory_button').val("Start");
+                       $('#startOutdoorHistory_button').attr('disabled', 'disabled');
+                   }
+               }
+               
+               function onStart_StopOutdoorHistory(button) {
+                   if(button.value=="Start") {
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/running", "true", function(xmlhttp) {
+                         drawChart();
+                       });
+                       button.value="Stop";
+                   } else { //button.value=="Stop"
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_OUTDOOR_TEMPERATURE + "/running", "false;withstorage", function(xmlhttp) {
+                         drawChart();
+                       });
+                       button.value="Start";
+                   }
+               }
+            </script>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="createOutdoorHistory_button" type="button" onClick="onCreateOutdoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Create / Remove a persisting resource for the outdoor temperature.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="startOutdoorHistory_button" type="button" onClick="onStart_StopOutdoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop collecting history data for the outdoor temperature.	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <h3>Temperature Forecast</h3>
+            <p>
+               This persisting resource records the forecast temperatures.
+            </p>
+            <script>
+               function onCreateForecastHistory(button) {
+                   if(button.value=="Create") {
+                       var payloadHigh = "topid = general\n" +
+                                         "resid = " + GENERAL_FORECAST_HIGH_TEMPERATURE + "\n" +
+                                         "deviceroot = " + weather_target + "\n" +
+                                         "deviceres = /tomorrow/high_temperature\n" +
+                                         "type = number";
+                       sendRequest("POST", persisting_service, payloadHigh);
+                       
+                       var payloadLow = "topid = general\n" +
+                                        "resid = " + GENERAL_FORECAST_LOW_TEMPERATURE + "\n" +
+                                        "deviceroot = " + weather_target + "\n" +
+                                        "deviceres = /tomorrow/low_temperature\n" +
+                                        "type = number";
+                       sendRequest("POST", persisting_service, payloadLow);
+                       
+                       drawChart();
+                       button.value="Remove";
+                       $('#startForecastHistory_button').removeAttr('disabled');
+                   } else { //button.value=="Remove"
+                       sendRequest("DELETE", persisting_service + "/general/" + GENERAL_FORECAST_HIGH_TEMPERATURE);
+                       sendRequest("DELETE", persisting_service + "/general/" + GENERAL_FORECAST_LOW_TEMPERATURE);
+                       button.value="Create";
+                       $('#startForecastHistory_button').val("Start");
+                       $('#startForecastHistory_button').attr('disabled', 'disabled');
+                   }
+               }
+               
+               function onStart_StopForecastHistory(button) {
+                   if(button.value=="Start") {
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_FORECAST_HIGH_TEMPERATURE + "/running", "true");
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_FORECAST_LOW_TEMPERATURE + "/running", "true");
+                       
+                       drawChart();
+                       button.value="Stop";
+                   } else { //button.value=="Stop"
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_FORECAST_HIGH_TEMPERATURE + "/running", "false;withstorage");
+                       sendRequest("PUT", persisting_service + "/general/" + GENERAL_FORECAST_LOW_TEMPERATURE + "/running", "false;withstorage");
+                       
+                       drawChart();
+                       button.value="Start";
+                   }
+               }
+            </script>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="createForecastHistory_button" type="button" onClick="onCreateForecastHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Create / Remove a persisting resource for the forecast temperature.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="startForecastHistory_button" type="button" onClick="onStart_StopForecastHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop collecting history data for the forecast temperature.	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onDayRangeChange(thisInput) {
+                 if (thisInput.value <= 0) thisInput.value = "1";
+                             drawChart();
+                 }
+            </script>
+            <h3>Graph</h3>
+            <p>
+               The graph shows the temperature curve of both indoor and outdoor temperature for the last couple of days.
+               The exact number of days can be specified below.
+            </p>
+            <form class="form_input" style="margin-top: 10px">
+               Days: <input id="day_range_text" onchange="onDayRangeChange(this)" type="text" size="5" value="3" />
+            </form>
+            <div class="graphs">
+               <div id="general_chart" style="width: 920px; height: 300px;"></div>
+            </div>
+            <h3>Temperatures</h3>
+            <p>
+               The aggregated temperatures over the specified period of time.
+            </p>
+            <h4>Outdoor</h4>
+            <p id="outdoor_average">...</p>
+            <p id="outdoor_max">...</p>
+            <p id="outdoor_min">...</p>
+            <h4>Indoor</h4>
+            <p id="indoor_average">...</p>
+            <p id="indoor_max">...</p>
+            <p id="indoor_min">...</p>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

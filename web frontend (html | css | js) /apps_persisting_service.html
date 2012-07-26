@@ -1,0 +1,540 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Apps - Persisting Service</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps_persisting_service.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var APP_NAME = "persistingservice";
+         
+         var option_translation = "coap://localhost:5685/apps/running/option_translation";
+         
+         var persisting_service_app = "coap://localhost:5684/" + APP_NAME + "/tasks";			
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         	$('#aggregate_select').attr('disabled', 'disabled');
+         	$('#retrieve_button').attr('disabled', 'disabled');
+              $('#weighted_average_table').hide();
+         	
+         	updateCreateButton();
+         	
+         	updateSelect();
+         });
+         
+         function updateSelect() {	  
+         	$('#top_select').empty();
+         	sendAsyncRequest("GET", persisting_service_app, "", function(xmlhttp) {
+         		$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+         			if (value!="") {
+         				$('#top_select')
+         					.append($("<option></option>")
+         						.attr("value",value)
+         						.text(value));
+         			}
+         		});
+         	});
+         	$('#task_select').empty();
+            }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Persisting Service</h1>
+            <p>
+               The persisting service can be used to store historical data about different devices.
+               A persisting instance specifies a target resource and the persisting service collects its data and stores it in a database. <br />
+               Two data types are possible, i.e. strings and numbers.
+               Data can be retrieved from the database through a RESTful interface.
+               Time dependent data retrieval can be used for both data types.
+               Numbers also support different aggregation forms.
+            </p>
+            <h2>Create New Persisting Service</h2>
+            <p>
+               Use the input template to create a new persisting instance.
+            </p>
+            <h3>Interface</h3>
+            <h4>Payload</h4>
+            <ul>
+               <li>topid: defince the top resource name.</li>
+               <li>resid: defines the resource name.</li>
+               <li>deviceroot: is the target device for the persisting instance.</li>
+               <li>deviceres: is the resource path from the target device for the persisting instance.</li>
+               <li>type: is the data type for storing data in the database.</li>
+               <li>options: can be passed for the get request.</li>
+            </ul>
+            <script>
+               function onTopidChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onResidChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onDeviceRootChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onDeviceResChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               	
+               var option_counter = 0;
+               function onClickAdd() {
+               	var counter = option_counter;
+               	var option_id = "option_"+option_counter++;
+               	$('#set_options').append(
+               		"<div id=" + option_id + "><input id='opt_"+counter+"' type='text' size='25' /> = <input id='val_"+counter+"' type='text' size='25' /></div>"
+               	);
+               }
+               	
+               function onClickRemove() {
+               	var option_id = "option_"+(--option_counter);
+               	$('#'+option_id).remove();
+               }
+               
+               function onCreate() {
+               	var topid = $('#topid_input').val();
+               	var resid = $('#resid_input').val();
+               	var deviceroot = "coap://" + $('#deviceroot_input').val();
+               	var deviceres = "/" + $('#deviceres_input').val();
+               	var type = $('#type_select').val();
+               	
+               	var message = "topid = " + topid + "\n";
+               	message += "resid = " + resid + "\n";
+               	message += "deviceroot = " + deviceroot + "\n";
+               	message += "deviceres = " + deviceres + "\n";
+               	message += "type = " + type + "\n";
+               	
+               	if (option_counter > 0) {
+               		message += "option = " + $('#opt_0').val()+"="+$('#val_0').val();
+               	}
+               	for (var i=1; i<option_counter; i++) {
+               		message += "&"+$('#opt_'+i).val()+"="+$('#val_'+i).val();
+               	}
+               	
+               	if (confirm("MESSAGE:\n"+message)) {
+               		sendAsyncRequest("POST", persisting_service_app, message, function(xmlhttp) {
+               			updateSelect();
+               		});
+               	}
+               }
+               
+               function updateCreateButton() {
+               	var topid = $('#topid_input').val();
+               	var resid = $('#resid_input').val();
+               	var deviceroot = $('#deviceroot_input').val();
+               	var deviceres = $('#deviceres_input').val();
+               		
+               	if (!(topid=="") && !(resid=="") && !(deviceroot=="") && !(deviceres=="")) {
+               		$('#create_persisting_service').removeAttr('disabled');
+               	} else {
+               		$('#create_persisting_service').attr('disabled', 'disabled');
+               	}
+               }
+               
+            </script>
+            <h3>Create New</h3>
+            <p>
+               Use this template to create a new persisting service.
+            </p>
+            <table border="2" class="input_template">
+               <tr>
+                  <td>topid = </td>
+                  <td><input id="topid_input" type="text" onchange="onTopidChange(this);" size="20" value="" /></td>
+               </tr>
+               <tr>
+                  <td>resid = </td>
+                  <td><input id="resid_input" type="text" onchange="onResidChange(this);" size="20" value="" /></td>
+               </tr>
+               <tr>
+                  <td>deviceroot = </td>
+                  <td><span>coap://</span><input id="deviceroot_input" type="text" onchange="onDeviceRootChange(this);" size="75" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>deviceres = </td>
+                  <td><span>/</span><input id="deviceres_input" type="text" onchange="onDeviceResChange(this);" size="82" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>type = </td>
+                  <td>
+                     <select id="type_select">
+                        <option selected="selected" value="number">number</option>
+                        <option value="string">string</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>options = </td>
+                  <td>
+                     <div id="options_input">
+                        <span style="margin-bottom: 20px; padding: 10px">Add / Remove Elements:</span><br />
+                        <input id="add_button" type="button" onclick="onClickAdd();" value="Add" style="margin-left: 10px" />
+                        <input id="remove_button" type="button" onclick="onClickRemove();" value="Remove" style="float: right; margin-right: 10px" /><br />
+                        <div id="set_options"></div>
+                     </div>
+                  </td>
+               </tr>
+               <tr>
+                  <td colspan="2"><input id="create_persisting_service" type="button" onclick="onCreate();" value="Create Persisting Service" /></td>
+               </tr>
+            </table>
+            <script>
+               function onTopSelect(thisSelect) {
+               	var top = thisSelect[thisSelect.selectedIndex].value;
+               	$('#task_select').empty();
+               	sendAsyncRequest("GET", persisting_service_app + "/" + top, "", function(xmlhttp) {
+               		$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+               			if (value!="") {
+               				$('#task_select')
+               					.append($("<option></option>")
+               						.attr("value",value)
+               						.text(value));
+               			}
+               		});
+               	});
+               }
+                    
+                    function updateFields(task) {
+                      var top = $('#top_select').val();
+               	$('#task_device').val(sendRequest("GET", persisting_service_app + "/" + top + "/" + task + "/devicepath"));
+               	var running = sendRequest("GET", persisting_service_app + "/" + top + "/" + task + "/running");
+               	$('#task_running').val(running);
+               	if (running=="true") {
+               		$('#task_running_button').val("Stop");
+               	} else { // running=="false"
+               		$('#task_running_button').val("Start");
+               	}
+               	$('#task_observing').val(sendRequest("GET", persisting_service_app + "/" + top + "/" + task + "/observing"));
+               	var type = sendRequest("GET", persisting_service_app + "/" + top + "/" + task + "/type");
+               	$('#task_type').val(type);
+               	if (type=="number") {
+               		$('#aggregate_select').removeAttr('disabled');
+               	} else if (type=="string") {
+               		$('#aggregate_select').attr('disabled', 'disabled');
+               	}
+               	$('#task_options').val(sendRequest("GET", persisting_service_app + "/" + top + "/" + task + "/options"));
+               	
+               	$('#retrieve_button').removeAttr('disabled');
+                    }
+               
+               function onTaskSelect(thisSelect) {
+               	var task = thisSelect[thisSelect.selectedIndex].value;
+               	updateFields(task);
+               }
+               
+               function onDeleteTask() {
+               	var top = $('#top_select').val();
+               	var task = $('#task_select').val();
+               	if (confirm("Delete task: " + task)) {
+               		sendAsyncRequest("DELETE", persisting_service_app + "/" + top + "/" + task, "", function(xmlhttp) {
+               			updateSelect();
+               		});
+               		
+               		$('#task_device').val("");
+               		$('#task_running').val("");
+               		$('#task_observing').val("");
+               		$('#task_type').val("");
+               		$('#task_options').val("");
+               	}
+               }
+               
+               function onClickChangeRunning() {
+               	var task = $('#task_select').val();
+               	var top = $('#top_select').val();
+               	
+               	var running = $('#task_running').val();
+               	if (running=="true") {
+               		if (confirm("Stop Persisting Task?")) {
+               			sendAsyncRequest("PUT", persisting_service_app + "/" + top + "/" + task + "/running", "false", function(xmlhttp) {
+                            updateFields($('#task_select').val());
+                          });
+               			$('#task_running_button').val("Start");
+               			$('#task_running').val("false");
+               		}
+               	} else {
+               		if (confirm("Start Persisting Task?")) {
+               			sendAsyncRequest("PUT", persisting_service_app + "/" + top + "/" + task + "/running", "true", function(xmlhttp) {
+                            updateFields($('#task_select').val());
+                          });
+               			$('#task_running_button').val("Stop");
+               			$('#task_running').val("true");
+               		}
+               	}
+               }
+               
+               function onLimitChange(thisText) {
+               	var limit = thisText.value;
+               	if (limit > 1000) {
+               		thisText.value = 1000;
+               	} else if (limit < 1) {
+               		thisText.value = 1;
+               	}
+               }
+               
+               var limit_option = "limit_option";
+               var date_option = "date_option";
+               var startdate_option = "startdate_option";
+               var enddate_option = "enddate_option";
+               
+               function onTimeConstraintChange(thisSelect) {
+               	var constraint = thisSelect[thisSelect.selectedIndex].value;
+               	
+               	if (constraint=="last") {
+               		$('#aggregate_select').removeAttr('disabled');
+               		$('#retrieval_options').html(
+               			"<span>Value <1-1000>: </span><input id='" + limit_option + "' type='text' onchange='onLimitChange(this);' size='30' />"
+               		);
+               		$('#retrieval_options').show();
+               	} else if(constraint=="since" || constraint=="onday") {
+               		$('#aggregate_select').removeAttr('disabled');
+               		$('#retrieval_options').html(
+               			"<span>Date: </span><input id='" + date_option + "' type='text' size='30' />"
+               		);
+               		$('#retrieval_options').show();
+               	} else if (constraint=="timerange") {
+               		$('#aggregate_select').removeAttr('disabled');
+               		$('#retrieval_options').html(
+               			"<span>Start Date: </span><input id='" + startdate_option + "' type='text' size='30' /><br />" +
+               			"<span>End Date: </span><input id='" + enddate_option + "' type='text' size='30' />"
+               		);
+               		$('#retrieval_options').show();
+               	} else if (constraint=="newest") {
+               		$('#aggregate_select').attr('disabled', 'disabled');
+               		$('#aggregate_select').val("");
+               		$('#retrieval_options').hide();
+               	} else { // constraint=="all"
+               		$('#aggregate_select').removeAttr('disabled');
+               		$('#retrieval_options').hide();
+               	}
+               }
+               
+               function onAggregateChange(thisSelect) {
+               	var aggregate = thisSelect[thisSelect.selectedIndex].value;
+               			
+               	if (aggregate=="") {
+               		$('#withdate_select').removeAttr('disabled');
+               	} else {
+               		$('#withdate_select').attr('disabled', 'disabled');
+               		$('#withdate_select').val("false");
+               	}
+                      
+                      if (aggregate=="avg") {
+                        $('#weighted_average_table').show();
+                      } else {
+                        $('#weighted_average_table').hide();
+                      }
+               }
+               
+               function onRetrieve() {
+               	var top = $('#top_select').val();
+               	var task = $('#task_select').val();
+               	var request = persisting_service_app + "/" + top + "/" + task + "/history/";
+               	
+               	var time_constraint = $('#time_constraint_select').val();
+               	var aggregate = $('#aggregate_select').val();
+               	var withdate = $('#withdate_select').val();
+                      var weighted = $('#weighted_average_select').val();
+               	
+               	request += time_constraint;
+               	if (time_constraint=="newest") {
+               		if (withdate=="true") request += "?withdate=true";
+               	} else if (time_constraint=="all") {
+               		if (aggregate!="") request += "/" + aggregate;
+                        if (withdate=="true" && aggregate=="avg" && weighted=="true") request += "?withdate=true&weighted=true";
+               		else if (withdate=="true") request += "?withdate=true";
+                        else if (aggregate=="avg" && weighted=="true") request += "?weighted=true";
+               	} else if (time_constraint=="last") {
+               		if (aggregate!="") request += "/" + aggregate;
+               		request += "?";
+               		if (withdate=="true") request += "withdate=true&";
+                        if (aggregate=="avg" && weighted=="true") request += "weighted=true&";
+               		request += "limit="+$('#'+limit_option).val();
+               	} else if (time_constraint=="since" || time_constraint=="onday") {
+               		if (aggregate!="") request += "/" + aggregate;
+               		request += "?";
+               		if (withdate=="true") request += "withdate=true&";
+                        if (aggregate=="avg" && weighted=="true") request += "weighted=true&";
+               		request += "date=" + $('#'+date_option).val();
+               	} else if (time_constraint=="timerange") {
+               		if (aggregate!="") request += "/" + aggregate;
+               		request += "?";
+               		if (withdate=="true") request += "withdate=true&";
+                        if (aggregate=="avg" && weighted=="true") request += "weighted=true&";
+               		request += "startdate=" + $('#'+startdate_option).val() + "&";
+               		request += "enddate=" + $('#'+enddate_option).val();
+               	}
+               	
+               	if (confirm("RETRIEVAL:\n" + request)) {
+               		sendAsyncRequest("PUT", option_translation, "GET;"+request, function(xmlhttp) {
+               			$('#retrieval_output').val(xmlhttp.responseText);
+               		});
+               	}
+               }
+               
+            </script>
+            <h3>Tasks</h3>
+            <p>
+               The persisting service tasks.
+            </p>
+            <div class="tasks">
+               <span>
+                  <table style="float: left; margin-right: 0px; margin-bottom: 20px;">
+                     <tr>
+                        <td>Top Resource:</td>
+                        <td>Task:</td>
+                     </tr>
+                     <tr>
+                        <td><select id="top_select" onChange="onTopSelect(this);" size="6" multiple></select></td>
+                        <td><select id="task_select" onChange="onTaskSelect(this);" size="6" multiple></select></td>
+                     </tr>
+                  </table>
+                  <table border="2" class="input_table" style="margin-right: 5px; margin-top: 50px">
+                     <tr>
+                        <td>
+                           <input type="button" onclick="onDeleteTask();" value="Delete Task" />
+                        </td>
+                        <td>
+                           Delete the selected task.
+                        </td>
+                     </tr>
+                  </table>
+               </span>
+               <table class="tasks_bottom" style="padding-bottom: 20px; margin-bottom: 20px; border-bottom: 2px dashed #000080;">
+                  <tr>
+                     <td>Device:</td>
+                     <td><input id="task_device" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Running:</td>
+                     <td><input id="task_running" type="text" size="70" readonly="readonly" /></td>
+                     <td><input id="task_running_button" type="button" onclick="onClickChangeRunning();" value="Start" /></td>
+                  </tr>
+                  <tr>
+                     <td>Observing:</td>
+                     <td><input id="task_observing" type="text" size="70" /></td>
+                  </tr>
+                  <tr>
+                     <td>Type:</td>
+                     <td><input id="task_type" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Options:</td>
+                     <td><input id="task_options" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+               </table>
+               <div id="data_retrieval">
+                  <h3>Data Retrieval</h3>
+                  <table class="data_retrieval_table">
+                     <tr>
+                        <td>Time Constraint:</td>
+                        <td>Aggregate Function:</td>
+                        <td>With Date:</td>
+                     </tr>
+                     <tr>
+                        <td>
+                           <select id="time_constraint_select" onchange="onTimeConstraintChange(this);">
+                              <option selected="selected" value="newest">Newest</option>
+                              <option value="all">All</option>
+                              <option value="last">Last</option>
+                              <option value="since">Since</option>
+                              <option value="onday">OnDay</option>
+                              <option value="timerange">Time Range</option>
+                           </select>
+                        </td>
+                        <td>
+                           <select id="aggregate_select" onchange="onAggregateChange(this);">
+                              <option selected="selected" value=""></option>
+                              <option value="sum">Sum</option>
+                              <option value="avg">Average</option>
+                              <option value="max">Max</option>
+                              <option value="min">Min</option>
+                           </select>
+                        </td>
+                        <td>
+                           <select id="withdate_select">
+                              <option selected="selected" value="false">false</option>
+                              <option value="true">true</option>
+                           </select>
+                        </td>
+                        <td><input id="retrieve_button" type="button" onclick="onRetrieve()" value="Retrieve" /></td>
+                     </tr>
+                  </table>
+                  <div id="retrieval_options"></div>
+                  <table id="weighted_average_table">
+                     <tr>
+                        <td>Weighted Average: </td>
+                        <td>
+                           <select id="weighted_average_select">
+                              <option selected="selected" value="false">false</option>
+                              <option value="true">true</option>
+                           </select>
+                        </td>
+                     </tr>
+                  </table>
+                  <textarea id="retrieval_output" rows="10" cols="80"></textarea>
+               </div>
+            </div>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_timed_request.html">Timed Action</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+               <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

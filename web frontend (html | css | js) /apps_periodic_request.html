@@ -1,0 +1,644 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Apps - Periodic Action</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps_periodic_request.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var APP_NAME = "periodic_action";
+         
+         var config_apps = "coap://localhost:5685/apps/appconfigs";
+         var running_apps = "coap://localhost:5685/apps/running";
+         var installed_apps = "coap://localhost:5685/install";
+         var periodic_request_app = "coap://localhost:5685/apps/running/" + APP_NAME;
+         
+         function isInstalled(installedApps) {
+         	var installedAppsArray = installedApps.split("\n");
+         		for (var el in installedAppsArray) {
+         		    if (installedAppsArray[el]==APP_NAME)
+             	return true;
+         	}
+         	return false;
+         }
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         	sendAsyncRequest("GET", running_apps, "", function(xmlhttp) {
+         		if (isInstalled(xmlhttp.responseText)) {
+         			$('#install_button').val("Uninstall");
+         			$('#start_button').removeAttr('disabled');
+         		} else {
+         			$('#install_button').val("Install");
+         			$('#start_button').attr('disabled', 'disabled');
+         		}
+         	});
+              				
+         	updateCreateButton();
+         	
+         	updateSelect();
+         });
+         
+         function updateSelect() {	  
+         	$('.tasks select').empty();
+         	sendAsyncRequest("GET", periodic_request_app + "/tasks", "", function(xmlhttp) {
+         		$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+         			if (value!="") {
+         				$('.tasks select')
+         					.append($("<option></option>")
+         						.attr("value",value)
+         						.text(value));
+         			}
+         		});
+         	});
+            }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Periodic Action</h1>
+            <p>
+               This app can be used to create periodic actions.
+               A periodic action periodically executes actions on some target device.
+               Both the period and the payload can be changed while the periodic task is running.
+               POST, PUT and DELETE actions are possible.
+            </p>
+            <h2>Create New Periodic Action</h2>
+            <p>
+               Use the input template to create a new periodic action.
+            </p>
+            <h3>Interface</h3>
+            <h4>Payload</h4>
+            <ul>
+               <li>resid: defines the resource name.</li>
+               <li>target: is the target device for the periodic action.</li>
+               <li>operation: is the action operation (post / put / delete).</li>
+               <li>period: is the period between two actions (ms).</li>
+               <li>periodfunc: lets you define a predefined function to pass the period.</li>
+               <li>(finite: can be used to only send a finite number of periodic actions).</li>
+               <li>(payload: holds the payload for the periodic actions (is stronger than payloadfunc).</li>
+               <li>(payloadfunc: lets you define a predefined function to pass the payload (see predefined functions).</li>
+            </ul>
+            <script>
+               function onInstall_Uninstall(input) {
+               	if (input.value=="Install") {
+               		sendAsyncRequest("POST", installed_apps + "/" + APP_NAME, "name = " + APP_NAME, function(xmlhttp) {
+               			input.value = "Uninstall";
+               		});
+               	} else { // input.value=="Uninstall"
+               		sendRequest("DELETE", config_apps + "/" + APP_NAME, "", function(xmlhttp) {
+               			input.value = "Install";
+               			updateSelect();
+               		});
+               	}
+               }
+            </script>
+            <h3>Main Control</h3>
+            <table border="2" class="nav_input_table">
+               <tr>
+                  <td>
+                     <input id="install_button" type="button" name="install_Button" onClick="onInstall_Uninstall(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Install / Uninstall (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onResidChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onDeviceChange(input) {
+               	input.value = input.value.split(' ').join('');
+               	updateCreateButton();
+               }
+               
+               function onOperationChange(input) {}
+               
+               function onPeriodChange(input) {
+               	var ret = "";
+               	var str = input.value.split(' ').join('');
+               	for (var el in str) {
+               		c = str.charAt(el);
+               		if (!isNaN(c))
+               			ret += c;
+               	}
+               	input.value = ret;
+               	updateCreateButton();
+               }
+                    
+                              var inc_start_per = 'inc_start_per';
+               var inc_step_per = 'inc_step_per';
+               var inc_end_per = 'inc_end_per';
+               
+               var add_button_per = 'add_button_per';
+               var remove_button_per = 'remove_button_per';
+               var set_values_per = 'set_values_per';
+               
+               var first_per = true;
+               var counter_per = 0;					
+               function onPeriodFuncChange(input) {
+               	var func = input[input.selectedIndex].value;
+               	if (func=="inc") {
+               		$('#periodfunc_input').html(
+               			"<span>Define the Values:</span><br />" +
+               			"<span>Start: </span><input id=" + inc_start_per + " type='text' size='10' style='margin-left: 48px'/><br />" +
+               			"<span>Step: </span><input id=" + inc_step_per + " type='text' size='10' style='margin-left: 51px'/><br />" +
+               			"<span>End: </span><input id=" + inc_end_per + " type='text' size='10' style='margin-left: 55px'/><br />"
+               		);
+               		$('#periodfunc_input').css('margin-right', '200px');
+               		$('#periodfunc_input').show();
+               	} else if (func=="set") {
+               		$('#periodfunc_input').html(
+               			"<span style='margin-bottom: 20px; padding: 10px'>Add / Remove Elements:</span><br />" +
+               			"<input id=" + add_button_per + " type='button' value='Add' style='margin-left: 10px'/>" +
+               			"<input id=" + remove_button_per + " type='button' value='Remove' style='float: right; margin-right: 10px'/><br />" +
+               			"<div id=" + set_values_per + "></div>"
+               		);
+                                      
+               		if (counter_per>0) {
+               			for (var i=0; i<counter_per; i++) {
+               				var value_id = "value_per_"+i;
+               				$('#'+set_values_per).append(
+               					"<div id=" + value_id + "><input type='text' size='21'></input></div>"
+               				);
+               			}
+               		} else {
+               			var value_id = "value_per_"+counter_per++;
+               			$('#'+set_values_per).append(
+               				"<div id=" + value_id + "><input type='text' size='21'></input></div>"
+               			);
+               		}
+               		
+               		if (first_per) {
+               			$('#'+add_button_per).live('click', function() {
+               				var value_id = "value_per_"+counter_per++;
+               				$('#'+set_values_per).append(
+               					"<div id=" + value_id + "><input type='text' size='21'></input></div>"
+               				);
+               			});
+               			
+               			$('#'+remove_button_per).live('click', function() {
+               				var value_id = "value_per_"+(--counter_per);
+               				$('#'+value_id).remove();
+               			});
+               			
+               			first_per = false;
+               		}
+               		
+               		$('#periodfunc_input').show();
+               	} else {
+               		$('#periodfunc_input').hide();
+               	}
+               	updateCreateButton();
+               }
+               
+               function onFiniteChange(input) {
+               	var ret = "";
+               	var str = input.value.split(' ').join('');
+               	for (var el in str) {
+               		c = str.charAt(el);
+               		if (!isNaN(c))
+               			ret += c;
+               	}
+               	input.value = ret;
+               }
+               
+               function onPayloadChange(input) {
+               	updateCreateButton();
+               }
+               
+               var inc_start_pay = 'inc_start_pay';
+               var inc_step_pay = 'inc_step_pay';
+               var inc_end_pay = 'inc_end_pay';
+               
+               var add_button_pay = 'add_button_pay';
+               var remove_button_pay = 'remove_button_pay';
+               var set_values_pay = 'set_values_pay';
+               
+               var first_pay = true;
+               var counter_pay = 0;					
+               function onPayloadFuncChange(input) {
+               	var func = input[input.selectedIndex].value;
+               	if (func=="inc") {
+               		$('#payloadfunc_input').html(
+               			"<span>Define the Values:</span><br />" +
+               			"<span>Start: </span><input id=" + inc_start_pay + " type='text' size='10' style='margin-left: 48px'/><br />" +
+               			"<span>Step: </span><input id=" + inc_step_pay + " type='text' size='10' style='margin-left: 51px'/><br />" +
+               			"<span>End: </span><input id=" + inc_end_pay + " type='text' size='10' style='margin-left: 55px'/><br />"
+               		);
+               		$('#payloadfunc_input').css('margin-right', '200px');
+               		$('#payloadfunc_input').show();
+               	} else if (func=="set") {
+               		$('#payloadfunc_input').html(
+               			"<span style='margin-bottom: 20px; padding: 10px'>Add / Remove Elements:</span><br />" +
+               			"<input id=" + add_button_pay + " type='button' value='Add' style='margin-left: 10px'/>" +
+               			"<input id=" + remove_button_pay + " type='button' value='Remove' style='float: right; margin-right: 10px'/><br />" +
+               			"<div id=" + set_values_pay + "></div>"
+               		);
+               		if (counter_pay>0) {
+               			for (var i=0; i<counter_pay; i++) {
+               				var value_id = "value_pay_"+i;
+               				$('#'+set_values_pay).append(
+               					"<div id=" + value_id + "><input type='text' size='21'></input></div>"
+               				);
+               			}
+               		} else {
+               			var value_id = "value_pay_"+counter_pay++;
+               			$('#'+set_values_pay).append(
+               				"<div id=" + value_id + "><input type='text' size='21'></input></div>"
+               			);
+               		}
+               		
+               		if (first_pay) {
+               			$('#'+add_button_pay).live('click', function() {
+               				var value_id = "value_pay_"+counter_pay++;
+               				$('#'+set_values_pay).append(
+               					"<div id=" + value_id + "><input type='text' size='21'></input></div>"
+               				);
+               			});
+               			
+               			$('#'+remove_button_pay).live('click', function() {
+               				var value_id = "value_pay_"+(--counter_pay);
+               				$('#'+value_id).remove();
+               			});
+               			
+               			first_pay = false;
+               		}
+               		
+               		$('#payloadfunc_input').show();
+               	} else {
+               		$('#payloadfunc_input').hide();
+               	}
+               	updateCreateButton();
+               }
+               
+               function onCreate() {
+               	var resid = $('#resid_input').val();
+               	var device = "coap://" + $('#device_input').val();
+               	var operation = $('#operation_select').val();
+               	var period = $('#period_input').val();
+               	var period_select = $('#period_select').val();
+               	if (period_select=="s") period = period * 1000;
+               	else if (period_select=="min") period = period * 1000 * 60;
+               	else if (period_select=="h") period = period * 1000 * 60 * 60;
+               	else if (period_select=="d") period = period * 1000 * 60 * 60 * 24;
+                      var periodfunc = $('#periodfunc_select').val();
+               	var finite = $('#finite_input').val();
+               	var payload = $('#payload_input').val();
+               	var payloadfunc = $('#payloadfunc_select').val();
+               	
+               	var message = "resid = " + resid + "\n";
+               	message += "target = " + device + "\n";
+               	message += "operation = " + operation + "\n";
+               	if (period!="") message += "period = " + period + "\n";
+                                  if (periodfunc=="inc") {
+               		message += "periodfunc = " + periodfunc + ";;" + $('#'+inc_start_per).val() + ";;" + $('#'+inc_step_per).val() + ";;" + $('#'+inc_end_per).val() + "\n";
+               	} else if (periodfunc=="set") {
+               		message += "periodfunc = " + periodfunc;
+               		for (var i=0; i<counter_per; i++) {
+               			message += ";;" + $('#value_per_'+i + ' input').val();
+               		}
+               		message += "\n";
+               	}
+               	if (finite!="") message += "finite = " + finite + "\n";
+               	if (payload != "") message += "payload = " + payload + "\n";
+               	if (payloadfunc=="inc") {
+               		message += "payloadfunc = " + payloadfunc + ";;" + $('#'+inc_start_pay).val() + ";;" + $('#'+inc_step_pay).val() + ";;" + $('#'+inc_end_pay).val();
+               	} else if (payloadfunc=="set") {
+               		message += "payloadfunc = " + payloadfunc;
+               		for (var i=0; i<counter_pay; i++) {
+               			message += ";;" + $('#value_pay_'+i + ' input').val();
+               		}
+               	}
+               	if (confirm("MESSAGE:\n"+message)) {
+               		sendRequest("POST", periodic_request_app + "/tasks", message);
+               		updateSelect();
+               	}
+               }
+               
+               function updateCreateButton() {
+               	var resid = $('#resid_input').val();
+               	var device = $('#device_input').val();
+               	var period = $('#period_input').val();
+               	var periodfunc = $('#periodfunc_select').val();
+               	var payload = $('#payload_input').val();
+               	var payloadfunc = $('#payloadfunc_select').val();
+               	
+               	if (!(resid=="") && !(device=="") && (!(period=="") || !(periodfunc=="")) && (!(payload=="") || !(payloadfunc==""))) {
+               		$('#create_periodic_task').removeAttr('disabled');
+               	} else {
+               		$('#create_periodic_task').attr('disabled', 'disabled');
+               	}
+               }
+               
+            </script>
+            <h3>Create New</h3>
+            <p>
+               Use this template to create a new periodic action.
+            </p>
+            <table border="2" class="input_template">
+               <tr>
+                  <td>resid = </td>
+                  <td><input id="resid_input" type="text" onchange="onResidChange(this);" size="10" value="" /></td>
+               </tr>
+               <tr>
+                  <td>target = </td>
+                  <td><span>coap://</span><input id="device_input" type="text" onchange="onDeviceChange(this);" size="75" value="" style="float: right" /></td>
+               </tr>
+               <tr>
+                  <td>operation = </td>
+                  <td>
+                     <select id="operation_select">
+                        <option selected="selected" value="PUT">PUT</option>
+                        <option value="PUT">POST</option>
+                        <option value="PUT">DELETE</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>period = </td>
+                  <td>
+                     <input id="period_input" type="text" onchange="onPeriodChange(this);" size="5" value="" style="text-align: right;" />
+                     <select id="period_select">
+                        <option selected="selected" value="ms">ms</option>
+                        <option value="s">s</option>
+                        <option value="min">min</option>
+                        <option value="h">h</option>
+                        <option value="d">d</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>periodfunc = </td>
+                  <td>
+                     <div id="periodfunc_input" style="margin-bottom: 10px"></div>
+                     <select id="periodfunc_select" onchange="onPeriodFuncChange(this);">
+                        <option selected="selected" value=""></option>
+                        <option value="inc">Increaser</option>
+                        <option value="set">Set</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>finite = </td>
+                  <td><input id="finite_input" type="text" onchange="onFiniteChange(this);" size="5" value="" style="text-align: right;" /></td>
+               </tr>
+               <tr>
+                  <td>payload = </td>
+                  <td><textarea id="payload_input" onchange="onPayloadChange(this);" cols="65" rows="5" wrap="off"></textarea></td
+               </tr>
+               <tr>
+                  <td>payloadfunc = </td>
+                  <td>
+                     <div id="payloadfunc_input"></div>
+                     <select id="payloadfunc_select" onchange="onPayloadFuncChange(this);">
+                        <option selected="selected" value=""></option>
+                        <option value="inc">Increaser</option>
+                        <option value="set">Set</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td colspan="2"><input id="create_periodic_task" type="button" onclick="onCreate();" value="Create Periodic Action" /></td>
+               </tr>
+            </table>
+            <script>
+               function updateFields(task) {
+                 $('#task_device').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/target"));
+               $('#task_operation').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/operation"));
+                 var running = sendRequest("GET", periodic_request_app + "/tasks/" + task + "/running");
+               $('#task_running').val(running);
+               if (running=="true") {
+               $('#task_running_button').val("Stop");
+                   $('#task_continue_button').attr('disabled', 'disabled');
+               } else { // running=="false"
+               $('#task_running_button').val("Start");
+                   $('#task_continue_button').removeAttr('disabled');
+               }
+               $('#task_period').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/period"));
+                 $('#task_periodfunc').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/periodfunc"));
+               $('#task_finite').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/finite"));
+               $('#task_payload').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/payload"));
+               $('#task_payloadfunc').val(sendRequest("GET", periodic_request_app + "/tasks/" + task + "/payloadfunc"));
+               }
+               
+               function onTaskSelect(thisSelect) {
+               var task = thisSelect[thisSelect.selectedIndex].value;
+                 updateFields(task);
+               }
+               
+               function onDeleteTask() {
+               var task = $('#task_select').val();
+               if (confirm("Delete task: " + task)) {
+               sendAsyncRequest("DELETE", periodic_request_app + "/tasks/" + task, "", function(xmlhttp) {
+               updateSelect();
+               });
+               }
+               
+               $('#task_device').val("");
+               $('#task_operation').val("");
+               $('#task_period').val("");
+                 $('#task_running').val("");  
+                 $('#task_periodfunc').val("");
+               $('#task_finite').val("");
+               $('#task_payload').val("");
+               $('#task_payloadfunc').val("");
+               }
+               
+               function onClickChangeRunning() {
+               var task = $('#task_select').val();
+               
+               var running = $('#task_running').val();
+               if (running=="true") {
+               if (confirm("Stop Periodic Task?")) {
+               sendAsyncRequest("PUT", periodic_request_app + "/tasks/" + task + "/running", "false", function(xmlhttp) {
+                       updateFields($('#task_select').val());
+                     });
+               $('#task_running_button').val("Start");
+                     $('#task_continue_button').removeAttr('disabled');
+               $('#task_running').val("false");
+               }
+               } else {
+               if (confirm("Start Periodic Task?")) {
+               sendAsyncRequest("PUT", periodic_request_app + "/tasks/" + task + "/running", "true", function(xmlhttp) {
+                       updateFields($('#task_select').val());
+                     });
+               $('#task_running_button').val("Stop");
+                     $('#task_continue_button').attr('disabled', 'disabled');
+               $('#task_running').val("true");
+               }
+               }
+               }
+               
+               function onClickChangeContinue() {
+                 var task = $('#task_select').val();
+                 
+                 if (confirm("Continue Periodic Task?")) {
+                   sendAsyncRequest("PUT", periodic_request_app + "/tasks/" + task + "/running", "true;continue", function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+                   $('#task_continue_button').attr('disabled', 'disabled');
+                   $('#task_running').val("true");
+                 }
+               }
+               
+               function onClickChangePeriod() {
+               var change_val = $('#task_period').val();
+               if(confirm("Change Period to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", periodic_request_app + "/tasks/" + task + "/period", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+                         
+               function onClickChangePeriodfunc() {
+               var change_val = $('#task_periodfunc').val();
+               if(confirm("Change Period Function to " + change_val)) {
+               var task = $('#task_select').val();
+               sendRequest("PUT", periodic_request_app + "/tasks/" + task + "/periodfunc", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+               
+               function onClickChangePayload() {
+               var change_val = $('#task_payload').val();
+               if(confirm("Change Payload to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", periodic_request_app + "/tasks/" + task + "/payload", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+                         
+               function onClickChangePayloadfunc() {
+               var change_val = $('#task_payloadfunc').val();
+               if(confirm("Change Payload Function to " + change_val)) {
+               var task = $('#task_select').val();
+               sendAsyncRequest("PUT", periodic_request_app + "/tasks/" + task + "/payloadfunc", change_val, function(xmlhttp) {
+                     updateFields($('#task_select').val());
+                   });
+               }
+               }
+            </script>
+            <h3>Tasks</h3>
+            <p>
+               The periodic action tasks.
+            </p>
+            <div class="tasks">
+               <span>
+                  <select id="task_select" onChange="onTaskSelect(this);" size="6" multiple></select>
+                  <table border="2" class="input_table">
+                     <tr>
+                        <td>
+                           <input type="button" onclick="onDeleteTask();" value="Delete Task" />
+                        </td>
+                        <td>
+                           Delete the selected task.
+                        </td>
+                     </tr>
+                  </table>
+               </span>
+               <table class="tasks_bottom">
+                  <tr>
+                     <td>Target:</td>
+                     <td><input id="task_device" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Operation:</td>
+                     <td><input id="task_operation" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Running:</td>
+                     <td><input id="task_running" type="text" size="70" readonly="readonly" /></td>
+                     <td><input id="task_running_button" type="button" onclick="onClickChangeRunning();" value="Start" /><input id="task_continue_button" type="button" onclick="onClickChangeContinue();" value="Cont." /></td>
+                  </tr>
+                  <tr>
+                     <td>Period:</td>
+                     <td><input id="task_period" type="text" size="70" /></td>
+                     <td><input type="button" onclick="onClickChangePeriod();" value="Change" /></td>
+                  </tr>
+                  <tr>
+                     <td>Periodfunc:</td>
+                     <td><textarea id="task_periodfunc" rows="4" cols="55"></textarea></td>
+                     <td><input type="button" onclick="onClickChangePeriodfunc();" value="Change" /></td>
+                  </tr>
+                  <tr>
+                     <td>Finite:</td>
+                     <td><input id="task_finite" type="text" size="70" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Payload:</td>
+                     <td><input id="task_payload" type="text" size="70" /></td>
+                     <td><input type="button" onclick="onClickChangePayload();" value="Change" /></td>
+                  </tr>
+                  <tr>
+                     <td>Payloadfunc:</td>
+                     <td><textarea id="task_payloadfunc" rows="4" cols="55"></textarea></td>
+                     <td><input type="button" onclick="onClickChangePayloadfunc();" value="Change" /></td>
+                  </tr>
+               </table>
+            </div>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_timed_request.html">Timed Action</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+               <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

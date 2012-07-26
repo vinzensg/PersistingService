@@ -1,0 +1,70 @@
+#sources_input
+{
+  margin:0 115px 10px 20px;
+  padding:10px;
+  width:400px;
+  height:auto;
+  float:right;
+  border:1px solid #000080;
+  border-radius:5px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+#set_sources
+{
+  padding:10px;
+}
+
+#aggregatefunc_input
+{
+  margin:0 200px 20px 20px;
+  padding:10px;
+  width:auto;
+  height:auto;
+  display:none;
+  float:right;
+  border:2px dashed #000080;
+  border-radius:5px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+#set_values
+{
+  margin:10px;
+}

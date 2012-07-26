@@ -1,0 +1,446 @@
+*
+{
+  margin:0;
+  padding:0;
+  font-size:14px;
+}
+
+body
+{
+  font-family:Verdana, Arial, Helvetica, sans-serif;
+  color:#333333;
+  background-color:#1e1d1a;
+  width:100%;
+  height:100%;
+}
+
+a:link
+{
+  color:#1530cc;
+  text-decoration:underline;
+  font-weight:normal;
+}
+
+a:visited
+{
+  color:#1530cc;
+  text-decoration:underline;
+  font-weight:normal;
+}
+
+a:hover
+{
+  color:#1530cc;
+  text-decoration:none;
+  font-weight:normal;
+}
+
+span
+{
+  font-family:'Droid Sans', Helvetica, Arial, sans-serif;
+  font-size:1em;
+/* 14px */
+  line-height:24px;
+}
+
+p
+{
+  font-family:'Droid Sans', Helvetica, Arial, sans-serif;
+  font-size:1em;
+/* 14px */
+  line-height:24px;
+}
+
+p.smalltext
+{
+  font-size:.625em;
+/* 10px */
+  line-height:14px;
+  margin:6px 0;
+}
+
+ul
+{
+  font-size:.875em;
+/* 14px */
+  line-height:22px;
+  margin:10px 0 10px 30px;
+}
+
+ol
+{
+  font-size:.875em;
+/* 14px */
+  line-height:22px;
+  margin:10px 0 10px 30px;
+}
+
+h1
+{
+  font-family:'Droid Serif', Georgia, Times, serif;
+  color:#000000;
+  font-size:1.8em;
+/* equals 24px */
+  font-weight:bold;
+  padding:15px 0;
+  margin-top:20px;
+}
+
+h2
+{
+  font-family:'Droid Serif', Georgia, Times, serif;
+  color:#000000;
+  font-size:1.4em;
+/* equals 22px */
+  font-weight:bold;
+  padding:5px 0;
+  margin-top:20px;
+}
+
+h3
+{
+  font-family:'Droid Serif', Georgia, Times, serif;
+  color:#000000;
+  font-size:1.125em;
+/* equals 18px */
+  font-weight:bold;
+  padding:5px 0;
+  margin-top:20px;
+}
+
+h4
+{
+  font-family:'Droid Serif', Georgia, Times, serif;
+  color:#000000;
+  font-size:1em;
+/* equals 16px */
+  font-weight:bold;
+  padding:5px 0;
+  margin:0 5px;
+  margin-top:20px;
+}
+
+#headercontainer
+{
+  width:1000px;
+  background-color:#ffffff;
+  margin-top:5px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+#textcontainer
+{
+  width:1010px;
+/* fallback */
+  background-color:#dfdfdf;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.83,#a9a9a9));
+/* chrome 10+, safari 5.1+ */
+  background-image:0;
+/* firefox; multiple color stops */
+  background-image:0;
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#dfdfdf',endColorstr='#bebebe');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#dfdfdf', endColorstr='#bebebe')";
+/* ie10 */
+  background-image:0;
+/* opera 11.1 */
+  background-image:0;
+/* The "standard" */
+  background-image:linear-gradient(#dfdfdf,#bebebe,#a9a9a9);
+  margin-top:5px;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+#header
+{
+  background-image:url(images/header_background.png);
+  position:relative;
+  text-align:left;
+  color:#000;
+  width:1000px;
+  padding:5px 0;
+  overflow:hidden;
+}
+
+.logo
+{
+  width:200px;
+  height:190px;
+}
+
+.banner
+{
+  position:absolute;
+  width:750px;
+  height:120px;
+  top:30px;
+  left:220px;
+}
+
+#topnav
+{
+  color:#ffffff;
+  background-image:url(images/navigation_bar.png);
+  float:left;
+  width:1020px;
+  margin-left:-10px;
+  padding:0;
+}
+
+#topnav ul
+{
+  list-style-type:none;
+  padding:0;
+  margin:0;
+}
+
+#topnav li
+{
+  display:inline;
+  float:left;
+}
+
+#topnav a:link
+{
+  color:#ffffff;
+  text-decoration:none;
+  display:block;
+  width:100px;
+  padding-top:6.5px;
+  padding-bottom:6.5px;
+  text-align:center;
+}
+
+#topnav a:hover
+{
+  color:#ffffff;
+  text-decoration:none;
+  background-image:url(images/navigation_bar_hover.png);
+}
+
+#topnav a:hover#leftmost
+{
+  color:#ffffff;
+  text-decoration:none;
+  background-image:url(images/navigation_bar_hover_leftmost.png);
+}
+
+.topnavleft
+{
+  width:660px;
+  float:left;
+  color:#ffffff;
+  margin:0;
+  padding:0;
+}
+
+#textcontent
+{
+  width:705px;
+  float:left;
+  margin:0 0 0 280px;
+}
+
+#content img
+{
+  padding:5px;
+  border:2px solid #000080;
+}
+
+#leftnav
+{
+  float:left;
+  text-align:left;
+  width:210px;
+  margin:20px 5px 5px -965px;
+/* left margin has to be -1000px for content first to work. In this case -995px due to the 5px margin*/
+  padding:10px 5px;
+  border:2px solid #000080;
+  border-radius:10px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+#leftnav h4
+{
+  border-bottom:1px solid #000080;
+}
+
+#leftnav ul
+{
+  list-style-type:none;
+  margin:0;
+}
+
+#leftnav li
+{
+  margin:0;
+}
+
+#leftnav a
+{
+  color:#1530cc;
+  font-weight:bold;
+  display:block;
+/* works with background-color in a:hover to make the whole box highlight when you hover  */
+  padding:3px 0 3px 5px;
+  text-decoration:none;
+}
+
+#leftnav a:visited
+{
+  color:#1530cc;
+  text-decoration:none;
+}
+
+#leftnav a:hover
+{
+  color:#ffffff;
+  background-color:#d3d3d3;
+/* works with display: block */
+  border-radius:5px;
+  text-decoration:none;
+}
+
+#footer
+{
+  text-align:center;
+  border-top:2px solid #000080;
+  width:950px;
+  clear:both;
+  font-weight:bold;
+  overflow:hidden;
+  padding:10px;
+}
+
+.description_text
+{
+  margin:30px 20px 10px;
+}
+
+.graphs
+{
+  margin-top:20px;
+  margin-bottom:20px;
+  width:920px;
+  height:300px;
+  padding:20px;
+  border:3px solid #000080;
+  border-radius:10px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+.input_table
+{
+  margin-top:20px;
+  margin-bottom:20px;
+  padding:3px;
+  border-color:#000080;
+  border-radius:5px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+.input_table tr td
+{
+  padding:10px;
+}
+
+.form_input input
+{
+  text-align:right;
+}
+
+.form_input p
+{
+  padding:5px;
+}
+
+.nav_input_table
+{
+  margin-top:20px;
+  margin-bottom:20px;
+  padding:3px;
+  border-color:#000080;
+  border-radius:5px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+.nav_input_table tr td
+{
+  padding:10px;
+}

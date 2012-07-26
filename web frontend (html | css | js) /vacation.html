@@ -1,0 +1,675 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Vacation</title>
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_vacation.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">
+         var APP_NAME = "thermostat_vacation_control";
+         var INDOOR_TEMPERATURE = "indoor_temperature";
+         var OUTDOOR_TEMPERATURE = "outdoor_temperature";
+         var FORECAST_TEMPERATURE = "forecast_temperature";
+         
+         var option_translation = "coap://localhost:5685/apps/running/option_translation";
+         
+         var config_apps = "coap://localhost:5685/apps/appconfigs";
+         var running_apps = "coap://localhost:5685/apps/running";
+         var installed_apps = "coap://localhost:5685/install";
+         var vacation_app = "coap://localhost:5685/apps/running/" + APP_NAME;
+         var control_loop_app = "coap://localhost:5685/apps/running/control_loop/tasks";
+         var multiple_aggregate_app = "coap://localhost:5685/apps/running/multiple_aggregate/tasks";
+         var multicast_app = "coap://localhost:5685/apps/running/multicast/tasks";
+         
+         var persisting_service = "coap://localhost:5684/persistingservice/tasks";
+         var persisting_service_app = persisting_service + "/" + APP_NAME;
+         var thermostat_target = "coap://localhost:5685/apps/running/thermostat_simulation_1";
+         var weather_target = "coap://localhost:5685/apps/running/weather";
+         
+         function isInstalled() {
+         	 var installedApps = sendRequest("GET", running_apps).split("\n");
+         	 for (var el in installedApps) {
+         		  if (installedApps[el]==APP_NAME)
+         				return true;
+         	 }
+         	 return false;
+         }
+         
+         function isCreatedHistory(hist) {
+         	 var existingTop = sendRequest("GET", persisting_service).split("\n");
+         	 if ($.inArray(APP_NAME, existingTop)!=-1) {
+         		  var existingPersisting = sendRequest("GET", persisting_service_app).split("\n");
+         		  if ($.inArray(hist, existingPersisting)!=-1) {
+         				return true;
+         		  }
+         	 }
+         	 return false;
+         }
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         		if (isInstalled()) {
+         			$('#install_button').val("Uninstall");
+         			$('#start_button').removeAttr('disabled');
+         		} else {
+         			$('#install_button').val("Install");
+         			$('#start_button').attr('disabled', 'disabled');
+         		}
+         		 
+         		if(sendRequest("GET", vacation_app + "/running")=="true") {
+         			$('#start_button').val("Stop");
+         		} else {
+         			$('#start_button').val("Start");
+         		}
+         		 
+         		 if(isCreatedHistory(INDOOR_TEMPERATURE)) {
+         			  $('#createIndoorHistory_button').val("Remove");
+         			  $('#startIndoorHistory_button').removeAttr('disabled');
+         		 } else {
+         			  $('#createIndoorHistory_button').val("Create");
+         			  $('#startIndoorHistory_button').attr('disabled', 'disabled');
+         		 }
+         		 
+         		 if(sendRequest("GET", persisting_service_app + "/" + INDOOR_TEMPERATURE + "/running")=="true") {
+         			  $('#startIndoorHistory_button').val("Stop");
+         		 } else {
+         			  $('#startIndoorHistory_button').val("Start");
+         		 }
+         		 
+         		 if(isCreatedHistory(OUTDOOR_TEMPERATURE)) {
+         			  $('#createOutdoorHistory_button').val("Remove");
+         			  $('#startOutdoorHistory_button').removeAttr('disabled');
+         		 } else {
+         			  $('#createOutdoorHistory_button').val("Create");
+         			  $('#startOutdoorHistory_button').attr('disabled', 'disabled');
+         		 }
+         		 
+         		 if(sendRequest("GET", persisting_service_app + "/" + OUTDOOR_TEMPERATURE + "/running")=="true") {
+         			  $('#startOutdoorHistory_button').val("Stop");
+         		 } else {
+         			  $('#startOutdoorHistory_button').val("Start");
+         		 }
+         		 
+         		 if(isCreatedHistory(FORECAST_TEMPERATURE)) {
+         			  $('#createForecastHistory_button').val("Remove");
+         			  $('#startForecastHistory_button').removeAttr('disabled');
+         		 } else {
+         			  $('#createForecastHistory_button').val("Create");
+         			  $('#startForecastHistory_button').attr('disabled', 'disabled');
+         		 }
+         		 
+         		 if(sendRequest("GET", persisting_service_app + "/" + FORECAST_TEMPERATURE + "/running")=="true") {
+         			  $('#startForecastHistory_button').val("Stop");
+         		 } else {
+         			  $('#startForecastHistory_button').val("Start");
+         		 }
+         		 
+         		 updateInputs();
+         		 
+         		 updateSelect();
+         	});
+         	
+         	function updateInputs() {
+         		 $('#indoor_max_input').val(sendRequest("GET", vacation_app + "/indoor_max"));
+         		 $('#indoor_min_input').val(sendRequest("GET", vacation_app + "/indoor_min"));
+         		 
+         		 $('#outdoor_threshold_input').val(sendRequest("GET", vacation_app + "/outdoor_threshold"));
+         	}
+         	
+         	function updateSelect() {
+         		updateSelectMultipleAggregate();
+         		updateSelectControlLoop();
+         		updateSelectMulticast();
+         	}
+         	
+         	function updateSelectMultipleAggregate() {
+         		 $('#multiple_aggregate_tasks select').empty();
+         		 $.each(sendRequest("GET", multiple_aggregate_app).split("\n"), function(index, value) {
+         			  if (value!="") {
+         					if (value==APP_NAME) {
+         						 $('#multiple_aggregate_tasks select')
+         							  .append($("<option></option>")
+         									.attr("value",value)
+         									.text(value));
+         					}
+         			  }
+         		 });
+         	}
+         	
+         	function updateSelectControlLoop() {
+         		 $('#control_loop_tasks select').empty();
+         		 $.each(sendRequest("GET", control_loop_app).split("\n"), function(index, value) {
+         			  if (value!="") {
+         					if (value==APP_NAME) {
+         						 $('#control_loop_tasks select')
+         							  .append($("<option></option>")
+         									.attr("value",value)
+         									.text(value));
+         					}
+         			  }
+         		 });
+         	}
+         	
+         	function updateSelectMulticast() {
+         		 $('#multicast_tasks select').empty();
+         		 $.each(sendRequest("GET", multicast_app).split("\n"), function(index, value) {
+         			  if (value!="") {
+         					if (value==APP_NAME) {
+         						 $('#multicast_tasks select')
+         							  .append($("<option></option>")
+         									.attr("value",value)
+         									.text(value));
+         					}
+         			  }
+         		 });
+         	}
+              
+         	function updateModuleFields() {
+         		  $('#cl_source').val("");
+         		$('#cl_target').val("");
+         		$('#cl_targetoperation').val("");
+         		$('#cl_decisionfunc').val("");
+         		$('#cl_modifyfunc').val("");
+         		$('#cl_modifyelsefunc').val("");
+                   
+         		$('#ma_sources').val("");
+         		$('#ma_aggregate').val("");
+         		$('#ma_aggregatefunc').val("");
+         	}
+          
+      </script>
+      <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+      <script type="text/javascript">
+         google.load('visualization', '1', {'packages':['annotatedtimeline']});
+         google.setOnLoadCallback(drawChart);
+         function drawChart() {
+         	 var day_sub = $('#day_range_text').val();
+         	 var date = new Date();
+         	 date.setDate(date.getDate() - day_sub);
+         			 
+         	 var history_data_array = new Array();
+         	 var value_date = null;
+         				 
+         	 var indoor_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service_app + "/" + INDOOR_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+         	 indoor_data_array.pop();
+         	 for (var el in indoor_data_array) {
+         		  value_date = indoor_data_array[el].split(';');
+         		  history_data_array.push([dateFromString(value_date[1]), parseFloat(value_date[0]), null, null]);
+         	 }
+         
+         	 var outdoor_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service_app + "/" + OUTDOOR_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+         	 outdoor_data_array.pop();
+         	 for (var el in outdoor_data_array) {
+         		  value_date = outdoor_data_array[el].split(';');
+         		  history_data_array.push([dateFromString(value_date[1]), null, parseFloat(value_date[0]), null]);
+         	 }
+         
+         	var forecast_data_array = sendRequest("PUT", option_translation, "GET;" + persisting_service_app + "/" + FORECAST_TEMPERATURE + "/history/since?withdate=true&date=" + dateToString(date)).split('\n');
+         	forecast_data_array.pop();
+         	for (var el in forecast_data_array) {
+         		value_date = forecast_data_array[el].split(';');
+         		history_data_array.push([dateFromString(value_date[1]), null, null, parseFloat(value_date[0])]);
+         	}						
+         		 
+         	 var data = new google.visualization.DataTable();
+         	 data.addColumn('date', 'Date');
+         	 data.addColumn('number', 'Indoor Temperature');
+         	 data.addColumn('number', 'Outdoor Temperature');
+         	 data.addColumn('number', 'Forecast Temperature');
+         	 	 
+         	 data.addRows(history_data_array);
+         	 	 
+         	 var chart = new google.visualization.AnnotatedTimeLine(document.getElementById('general_chart'));
+         	 chart.draw(data, {displayAnnotations: true, annotationsWidth: 15, displayRangeSelector: false, dateFormat: 'HH:mm MMMM dd, yyyy'});
+         }
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="index.html">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div class="description_text">
+            <h1>Vacation Control</h1>
+            <p>
+               This page displays the temperatures recorded for the vacation-control app, which prevents the temperature to drop below a minimum.
+               The user can specify the minimum, maximum temperature and an outdoor threshold.
+               The forecast is used to ajust the temperature early enough.
+            </p>
+            <h2>Forecast</h2>
+            <p>
+               Using the weather app, the forecast and the current temperature is read from the yahoo forecast.
+            </p>
+            <script>
+               function onInstall_Uninstall(button) {
+               if (button.value=="Install") {
+               	 sendAsyncRequest("POST", installed_apps + "/" + APP_NAME, "name = " + APP_NAME, function (xmlhttp) {
+               	updateInputs();
+               	});
+               	 button.value="Uninstall";
+               	 $('#start_button').removeAttr('disabled');
+               } else { // button.value=="Uninstall"
+               	 sendAsyncRequest("DELETE", config_apps + "/" + APP_NAME, "", function(xmlhttp) {
+               	updateInputs();
+               	});
+               	 button.value="Install";
+               	 $('#start_button').val("Start");
+               	 $('#start_button').attr('disabled', 'disabled');
+               }
+               }
+               
+               function onStart_Stop(button) {
+               if (button.value=="Start") {
+               	 sendAsyncRequest("PUT", vacation_app + "/running", "true", function(xmlhttp) {
+               	updateSelect();
+                      });
+               	 button.value="Stop";
+               } else { //button.value=="Stop"
+               	 sendAsyncRequest("PUT", vacation_app + "/running", "false", function(xmlhttp) {
+               	updateSelect();
+               	updateModuleFields();
+                      });
+               	 button.value="Start";	
+               }
+               }
+            </script>
+            <h2>Main Control</h2>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="install_button" type="button" name="install_Button" onClick="onInstall_Uninstall(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Install / Uninstall (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="start_button" type="button" name="start_Button" onClick="onStart_Stop(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop the Day-Night Control App in the app server.(The app already needs to be running in the app server).	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script type="text/javascript">
+               function inputChanged(thisInput) {
+               if (thisInput.id=="indoor_max_input") {
+               	 sendAsyncRequest("PUT", vacation_app + "/indoor_max", thisInput.value);
+               } else if (thisInput.id=="indoor_min_input") {
+               	 sendAsyncRequest("PUT", vacation_app + "/indoor_min", thisInput.value);
+               } else if (thisInput.id=="outdoor_threshold_input") {
+               	 sendAsyncRequest("PUT", vacation_app + "/outdoor_threshold", thisInput.value);
+               }
+               updateSelect();
+               }	
+            </script>
+            <h2>Parameter Input</h2>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>Indoor Maximum</td>
+                  <td>Indoor Minimum</td>
+                  <td>Outdoor Threshold</td>
+               </tr>
+               <tr>
+                  <td>
+                     Temp: <input id="indoor_max_input" type="text" onchange="inputChanged(this);" size="10" style="margin-left: 40px; text-align: right;" /><br />
+                  </td>
+                  <td>
+                     Temp: <input id="indoor_min_input" type="text" onchange="inputChanged(this);" size="10" style="margin-left: 40px; text-align: right;" /><br />
+                  </td>
+                  <td>
+                     Temp: <input id="outdoor_threshold_input" type="text" onchange="inputChanged(this);" size="10" style="margin-left: 40px; text-align: right;" /><br />
+                  </td>
+               </tr>
+            </table>
+            <h2>History</h2>
+            <p>
+               The history of the smart thermostat.
+            </p>
+            <h3>Indoor Temperature</h3>
+            <p>
+               This persisting resource records the indoor temperature recorded by thermostat 1.
+            </p>
+            <script>
+               function onCreateIndoorHistory(button) {
+               if(button.value=="Create") {
+               	 var payload = "topid = " + APP_NAME + "\n" +
+               						"resid = " + INDOOR_TEMPERATURE + "\n" +
+               						"deviceroot = " + thermostat_target + "\n" +
+               						"deviceres = /temperature\n" +
+               						"type = number";
+               	 sendAsyncRequest("POST", persisting_service, payload, function(xmlhttp) {
+               		drawChart();
+               	});
+               	 button.value="Remove";
+               	 $('#startIndoorHistory_button').removeAttr('disabled');
+               } else { //button.value=="Remove"
+               	 sendAsyncRequest("DELETE", persisting_service_app + "/" + INDOOR_TEMPERATURE);
+               	 button.value="Create";
+               	 $('#startIndoorHistory_button').val("Start");
+               	 $('#startIndoorHistory_button').attr('disabled', 'disabled');
+               }
+               
+               }
+               
+               function onStart_StopIndoorHistory(button) {
+               if(button.value=="Start") {
+               	 sendAsyncRequest("PUT", persisting_service_app + "/" + INDOOR_TEMPERATURE + "/running", "true", function(xmlhttp) {
+               	drawChart();
+                      });
+               	 button.value="Stop";
+               } else { //button.value=="Stop"
+               	 sendAsyncRequest("PUT", persisting_service_app + "/" + INDOOR_TEMPERATURE + "/running", "false;withstorage", function(xmlhttp) {
+               	drawChart();
+                      });
+               	 button.value="Start";
+               }
+               }
+            </script>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="createIndoorHistory_button" type="button" onClick="onCreateIndoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Create / Remove a persisting resource for the indoor temperature.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="startIndoorHistory_button" type="button" onClick="onStart_StopIndoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop collecting history data for the indoor temperature.	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <h3>Outdoor Temperature</h3>
+            <p>
+               This persisting resource records the outdoor temperature.
+            </p>
+            <script>
+               function onCreateOutdoorHistory(button) {
+               if(button.value=="Create") {
+               	 var payload = "topid = " + APP_NAME + "\n" +
+               						"resid = " + OUTDOOR_TEMPERATURE + "\n" +
+               						"deviceroot = " + weather_target + "\n" +
+               						"deviceres = /now/temperature\n" +
+               						"type = number";
+               	 sendAsyncRequest("POST", persisting_service, payload, function(xmlhttp) {
+                           drawChart();
+                          });
+               	 button.value="Remove";
+               	 $('#startOutdoorHistory_button').removeAttr('disabled');
+               } else { //button.value=="Remove"
+               	 sendAsyncRequest("DELETE", persisting_service_app + "/" + OUTDOOR_TEMPERATURE);
+               	 button.value="Create";
+               	 $('#startOutdoorHistory_button').val("Start");
+               	 $('#startOutdoorHistory_button').attr('disabled', 'disabled');
+               }
+               
+               }
+               
+               function onStart_StopOutdoorHistory(button) {
+               if(button.value=="Start") {
+               	 sendAsyncRequest("PUT", persisting_service_app + "/" + OUTDOOR_TEMPERATURE + "/running", "true", function(xmlhttp) {
+                           drawChart();
+                          });
+               	 button.value="Stop";
+               } else { //button.value=="Stop"
+               	 sendAsyncRequest("PUT", persisting_service_app + "/" + OUTDOOR_TEMPERATURE + "/running", "false;withstorage", function(xmlhttp) {
+                           drawChart();
+                          });
+               	 button.value="Start";
+               }
+               }
+            </script>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="createOutdoorHistory_button" type="button" onClick="onCreateOutdoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Create / Remove a persisting resource for the outdoor temperature.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="startOutdoorHistory_button" type="button" onClick="onStart_StopOutdoorHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop collecting history data for the outdoor temperature.	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <h3>Forecast Temperature</h3>
+            <p>
+               This persisting resource records the forecast temperature.
+            </p>
+            <script>
+               function onCreateForecastHistory(button) {
+               if(button.value=="Create") {
+               	 var payload = "topid = " + APP_NAME + "\n" +
+               						"resid = " + FORECAST_TEMPERATURE + "\n" +
+               						"deviceroot = " + weather_target + "\n" +
+               						"deviceres = /tomorrow/low_temperature\n" +
+               						"type = number";
+               	 sendAsyncRequest("POST", persisting_service, payload, function(xmlhttp) {
+                           drawChart();
+                          });
+               	 button.value="Remove";
+               	 $('#startForecastHistory_button').removeAttr('disabled');
+               } else { //button.value=="Remove"
+               	 sendAsyncRequest("DELETE", persisting_service_app + "/" + FORECAST_TEMPERATURE);
+               	 button.value="Create";
+               	 $('#startForecastHistory_button').val("Start");
+               	 $('#startForecastHistory_button').attr('disabled', 'disabled');
+               }
+               
+               }
+               
+               function onStart_StopForecastHistory(button) {
+               if(button.value=="Start") {
+               	 sendAsyncRequest("PUT", persisting_service_app + "/" + FORECAST_TEMPERATURE + "/running", "true", function(xmlhttp) {
+                           drawChart();
+                          });
+               	 button.value="Stop";
+               } else { //button.value=="Stop"
+               	 sendAsyncRequest("PUT", persisting_service_app + "/" + FORECAST_TEMPERATURE + "/running", "false;withstorage", function(xmlhttp) {
+                           drawChart();
+                          });
+               	 button.value="Start";
+               }
+               }
+            </script>
+            <table border="2" class="input_table">
+               <tr>
+                  <td>
+                     <input id="createForecastHistory_button" type="button" onClick="onCreateForecastHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Create / Remove a persisting resource for the forecast temperature.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="startForecastHistory_button" type="button" onClick="onStart_StopForecastHistory(this);" value="" />
+                  </td>
+                  <td>
+                     <p>
+                        Start / Stop collecting history data for the forecast temperature.	
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onDayRangeChange(thisInput) {
+               	if (thisInput.value <= 0) thisInput.value = "1";
+               	drawChart();
+               }
+            </script>
+            <h3>Graph</h3>
+            <p>
+               The graph shows the temperature curve of both indoor and outdoor temperature for the last couple of days.
+               The exact number of days can be specified below.
+            </p>
+            <div>
+               Days: <input id="day_range_text" onchange="onDayRangeChange(this)" type="text" size="5" value="3" style="text-align: right;" />
+            </div>
+            <div class="graphs">
+               <div id="general_chart" style="width: 920px; height: 300px;"></div>
+            </div>
+            <!-- Control Loop -->
+            <script>
+               function onSelectedControlLoop(thisSelect) {
+               	var control_loop_task = thisSelect[thisSelect.selectedIndex].value;
+               	$('#cl_source').val(sendRequest("GET", control_loop_app + "/" + control_loop_task + "/source"));
+               	$('#cl_target').val(sendRequest("GET", control_loop_app + "/" + control_loop_task + "/target"));
+               	$('#cl_targetoperation').val(sendRequest("GET", control_loop_app + "/" + control_loop_task + "/targetoperation"));
+               	$('#cl_decisionfunc').val(sendRequest("GET", control_loop_app + "/" + control_loop_task + "/decisionfunc"));
+               	$('#cl_modifyfunc').val(sendRequest("GET", control_loop_app + "/" + control_loop_task + "/modifyfunc"));
+               	$('#cl_modifyelsefunc').val(sendRequest("GET", control_loop_app + "/" + control_loop_task + "/modifyfuncelse"));
+               		  
+               	$('#control_loop_tasks_output').html(text);
+               }
+            </script>
+            <!-- Multiple Aggregate -->
+            <script>
+               function onSelectedMultipleAggregate(thisSelect) {
+               	var multiple_aggregate_task = thisSelect[thisSelect.selectedIndex].value;
+               	$('#ma_sources').val(sendRequest("GET", multiple_aggregate_app + "/" + multiple_aggregate_task + "/sources"));
+               	$('#ma_aggregate').val(sendRequest("GET", multiple_aggregate_app + "/" + multiple_aggregate_task + "/aggregate"));
+               	$('#ma_aggregatefunc').val(sendRequest("GET", multiple_aggregate_app + "/" + multiple_aggregate_task + "/aggregatefunc"));
+               }
+                 
+               function onAggregateGet() {
+               	sendAsyncRequest("GET", multiple_aggregate_app, "", function(xmlhttp) {
+               		$('#aggregate_output').val(xmlhttp.responseText);
+               	});
+               }
+            </script>
+            <h2>Multiple Aggregate</h2>
+            <p>
+               The multiple aggregate, which will be executed in order to set the temperature.
+            </p>
+            <div id="multiple_aggregate_tasks">
+               <select onChange="onSelectedMultipleAggregate(this);" size="6" multiple></select>
+               <table class="apps_bottom">
+                  <tr>
+                     <td>Sources:</td>
+                     <td><textarea id="ma_sources" rows="4" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+                  <tr>
+                     <td>Aggregate:</td>
+                     <td><input id="ma_aggregate" type="text" size="111" readonly="readonly" /></td>
+                     <td><input type="button" onclick="onAggregateGet();" value="GET" style="margin-left: 20px;" /></td>
+                  </tr>
+                  <tr>
+                     <td>Aggregatefunc:</td>
+                     <td><textarea id="ma_aggregatefunc" rows="7" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+               </table>
+            </div>
+            <h2>Control Loop</h2>
+            <p>
+               The control loop, which will be executed in order to set the temperature.
+            </p>
+            <div id="control_loop_tasks">
+               <select onChange="onSelectedControlLoop(this);" size="6" multiple></select>
+               <table class="apps_bottom">
+                  <tr>
+                     <td>Source:</td>
+                     <td><input id="cl_source" type="text" size="111" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Target:</td>
+                     <td><input id="cl_target" type="text" size="111" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Targetoperation:</td>
+                     <td><input id="cl_targetoperation" type="text" size="111" readonly="readonly" /></td>
+                  </tr>
+                  <tr>
+                     <td>Decisionfunc:</td>
+                     <td><textarea id="cl_decisionfunc" rows="7" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+                  <tr>
+                     <td>Modifyfunc:</td>
+                     <td><textarea id="cl_modifyfunc" rows="7" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+                  <tr>
+                     <td>Modifyfuncelse:</td>
+                     <td><textarea id="cl_modifyelsefunc" rows="7" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+               </table>
+            </div>
+            <!-- Multicast -->
+            <script>
+               function onSelectedMulticast(thisSelect) {
+               	var multicast_task = thisSelect[thisSelect.selectedIndex].value;
+               	$('#mc_targets').val(sendRequest("GET", multicast_app + "/" + multicast_task + "/targets"));
+               	$('#mc_targetdecisions').val(sendRequest("GET", multicast_app + "/" + multicast_task + "/targetdecisions"));
+               }
+            </script>
+            <h2>Multicast</h2>
+            <p>
+               The multicast, which will be executed in order to reach multiple thermostats.
+            </p>
+            <div id="multicast_tasks">
+               <select onChange="onSelectedMulticast(this);" size="6" multiple></select>
+               <table class="apps_bottom">
+                  <tr>
+                     <td>Targets:</td>
+                     <td><textarea id="mc_targets" rows="4" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+                  <tr>
+                     <td>Targetdecisions:</td>
+                     <td><textarea id="mc_targetdecisions" rows="7" cols="85" readonly="readonly"></textarea></td>
+                  </tr>
+               </table>
+            </div>
+            <div id="footer">
+               <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+            </div>
+         </div>
+      </div>
+   </body>
+</html>

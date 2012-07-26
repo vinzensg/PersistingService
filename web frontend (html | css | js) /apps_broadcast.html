@@ -1,0 +1,457 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>Thermostat Visualization | Apps - Multicast</title>
+        <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <link href="style.css" rel="stylesheet" type="text/css" />
+		<link href="style_apps.css" rel="stylesheet" type="text/css" />
+		<link href="style_apps_broadcast.css" rel="stylesheet" type="text/css" />
+		<link href='http://fonts.googleapis.com/css?family=Droid+Serif' rel='stylesheet' type='text/css'>
+		<link href='http://fonts.googleapis.com/css?family=Droid+Sans' rel='stylesheet' type='text/css'>
+			
+		<script type='text/javascript' src='shared.js'></script>
+		<script type='text/javascript'>
+			var APP_NAME = "multicast";
+			
+			var config_apps = "coap://localhost:5685/apps/appconfigs";
+			var running_apps = "coap://localhost:5685/apps/running";
+			var installed_apps = "coap://localhost:5685/install";
+			var multicast_app = "coap://localhost:5685/apps/running/" + APP_NAME;
+			
+			function isInstalled(installedApps) {
+				var installedAppsArray = installedApps.split("\n");
+					for (var el in installedAppsArray) {
+					    if (installedAppsArray[el]==APP_NAME)
+			    	return true;
+				}
+				return false;
+			}
+		</script>
+		<script type='text/javascript' src='http://code.jquery.com/jquery-latest.js'></script>
+		<script type='text/javascript'>
+			$("document").ready(function() {
+				sendAsyncRequest("GET", running_apps, "", function(xmlhttp) {
+					if (isInstalled(xmlhttp.responseText)) {
+						$('#install_button').val("Uninstall");
+						$('#start_button').removeAttr('disabled');
+					} else {
+						$('#install_button').val("Install");
+						$('#start_button').attr('disabled', 'disabled');
+					}
+				});
+				
+				updateSendButton();
+				
+				updateCreateButton();
+				
+				updateSelect();
+			});
+			
+			function updateSelect() {	  
+				$('.tasks select').empty();
+				sendAsyncRequest("GET", multicast_app + "/tasks", "", function(xmlhttp) {
+					$.each((xmlhttp.responseText).split("\n"), function(index, value) {
+						if (value!="") {
+							$('.tasks select')
+								.append($("<option></option>")
+									.attr("value",value)
+									.text(value));
+						}
+					});
+				});
+		    }
+		</script>
+	</head>
+    
+    <body>		
+		<div id="headercontainer"> 
+            <div id="header">
+                <div class="logo">
+                    <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+                        <img src="images/thermostat.png" border="0" width="166px" height="180px"/>
+                    </a>
+                </div>
+                
+                <div class="banner">
+                    <img src="images/smart_thermostat.png" width="717px" height="120px"/>
+                </div>
+            </div>
+            
+            <div id="topnav">
+                <div class="topnavleft">
+                    <ul>
+                        <li><a id="leftmost" href="index.html">HOME</a></li> 
+                        <li><a href="general.html">General</a></li>
+						<li><a href="vacation.html">Vacation</a></li>
+                        <li><a href="day_night.html">Day-Night</a></li>
+                        <li><a href="apps.html">Apps</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div id="textcontainer">
+			<div id="textcontent">
+				<h1>Multicast</h1>
+				<p>
+					This app multiplies a single request for a collection of target resources.
+					A multicast instance is created for multicasts, which are often used.
+					A single multicast can be performed using a simpler mechanism where the target resources are passed with the request. 
+				</p>
+				
+				
+				
+				<h2>Create New Multicast</h2>
+				<p>
+					Use the input template to create a new multicast.
+				</p>
+				
+				<h3>Interface</h3>
+				
+				<h4>Payload</h4>
+				<ul>
+					<li>resid: defines the resource name.</li>
+					<li>targetX: the targets for the multicast.</li>
+					<li>targetdecisionX: the decision, whether to send the incoming request to the target.
+				</ul>
+				
+				<!-- Main Control -->
+				<script>
+					function onInstall_Uninstall(input) {
+						if (input.value=="Install") {
+							sendAsyncRequest("POST", installed_apps + "/" + APP_NAME, "name = " + APP_NAME, function(xmlhttp){
+								input.value = "Uninstall";
+							});
+						} else { // input.value=="Uninstall"
+							sendAsyncRequest("DELETE", config_apps + "/" + APP_NAME, "", function(xmlhttp){
+								input.value = "Install";
+								updateSelect();
+							});
+						}
+					}
+				</script>
+				
+				<h3>Main Control</h3>
+				<table border="2" class="nav_input_table">
+					<tr>
+						<td>
+							<input id="install_button" type="button" name="install_Button" onClick="onInstall_Uninstall(this);" value="" />
+						</td>
+						<td>
+							<p>
+								Install / Uninstall (i.e. create an instance) the app inside the app server.
+							</p>
+						</td>
+					</tr>
+				</table>
+				
+				<!-- Send Single multicast -->
+				<script>
+					var target_counter1 = 0;
+					function onClickAdd_Single() {
+						var counter = target_counter1;
+						var target_id = "target1_"+target_counter1++;
+						$('#set_targets1').append(
+							"<div id=" + target_id + "><input id='tar1_"+counter+"' type='text' size='59' /></div>"
+						);
+						updateSendButton();
+					}
+						
+					function onClickRemove_Single() {
+						var target_id = "target1_"+(--target_counter1);
+						$('#'+target_id).remove();
+						updateSendButton();
+					}
+						
+					function onSend() {
+						var message = "";
+						for (var i=0; i<target_counter1; i++) {
+							message += "target" + (i+1) + " = " + $('#tar1_'+i).val() + "\n";
+						}
+						
+						var payload = $('#payload_input').val();
+						message += "payload = " + payload;
+						
+						var operation = $('#operation_select').val();
+						
+						if (confirm("MESSAGE:\n"+message+"\n"+"OPERATION: "+operation)) {
+							sendAsyncRequest(operation, multicast_app + "/single", message, function(xmlhttp) {
+								updateSelect();
+							});
+						}
+					}
+					
+					function updateSendButton() {
+						if (target_counter1>0) {
+							$('#send_multicast').removeAttr('disabled');
+						} else {
+							$('#send_multicast').attr('disabled', 'disabled');
+						}
+					}
+				</script>
+				
+				<h3>Send Single Multicast</h3>
+				<p>
+					Use this template to send a single multicast.
+				</p>
+				<table border="2" class="input_template">
+					<tr>
+						<td>operation = </td>
+						<td>
+							<select id="operation_select">
+								<option selected='selected' value"PUT">PUT</option>
+								<option value"PUT">POST</option>
+								<option value"PUT">DELETE</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td>payload = </td><td><textarea id=payload_input rows="4" cols="65" wrap="off"></textarea></td>
+					</tr>
+					<tr>
+						<td>targets = </td>
+						<td>
+							<div id="targets_input">
+								<span style='margin-bottom: 20px; padding: 10px'>Add / Remove Elements:</span><br />
+								<input id="add_button1" type='button' onclick="onClickAdd_Single();" value='Add' style="margin-left: 10px"/>
+								<input id="remove_button1" type='button' onclick="onClickRemove_Single();" value='Remove' style="float: right; margin-right: 10px"/><br />
+								<div id="set_targets1"></div>
+							</div>
+						</td>
+					</tr>
+					<tr>	
+						<td colspan="2"><input id="send_multicast" type="button" onclick="onSend();" value="Send Single Multicast"/></div>
+					</tr>
+				</table>
+				
+				<!-- Create new Task -->
+				<script>
+					function onResidChange(input) {
+						input.value = input.value.split(' ').join('');
+						updateCreateButton();
+					}
+						
+					var target_counter2 = 0;
+					function onClickAdd_Target() {
+						var counter = target_counter2;
+						var target_id = "target2_"+target_counter2++;
+						$('#set_targets2').append(
+							"<div id=" + target_id + "><input id='tar2_"+counter+"' type='text' size='59' /></div>"
+						);
+						updateCreateButton();
+            onClickAdd_Decision();
+					}
+						
+					function onClickRemove_Target() {
+						var target_id = "target2_"+(--target_counter2);
+						$('#'+target_id).remove();
+						updateCreateButton();
+            onClickRemove_Decision();
+					}
+          
+          
+          function onDecisionFuncChange(input) {
+            var select_id = input.id;
+            var decisionfunc_input = "decision_"+select_id.substring(select_id.length-1);
+						var func = input[input.selectedIndex].value;
+            var value_dec = "value_dec_" + select_id.substring(select_id.length-1);
+            
+						if (func=="equal" || func=="notequal" || func=="greater" || func=="greaterequal" || func=="less" || func=="lessequal" || func=="contains" || func=="prefix" || func=="suffix") {
+              $('#'+decisionfunc_input).html(
+								"<span>Define the Value:</span><br />" +
+								"<span>Value: </span><input id=" + value_dec + " type='text' size='20' value='0' style='margin-left: 10px'/>"
+							);
+							$('#'+decisionfunc_input).css('margin-right', '10px');
+							$('#'+decisionfunc_input).show();
+						} else if (func=="own") {
+							$('#'+decisionfunc_input).html(
+								"<span>function decision_func(value) {</span><br />" +
+								"<span style='margin-left: 20px'>if ( <input id='" + value_dec + "' size='33' style='margin-left: 5px'/> ) return true;<br />" +
+								"<span style='margin-left: 20px'>else return false;</span><br />" +
+								"<span>}</span>"
+							);
+							$('#'+decisionfunc_input).css('margin-right', '0px');
+							$('#'+decisionfunc_input).show();
+						} else {
+							$('#'+decisionfunc_input).hide();
+						}
+						updateCreateButton();
+					}
+          
+          var decision_counter = 0;
+					function onClickAdd_Decision() {
+						var counter = decision_counter;
+						var decision_id = "decision_"+counter;
+            var decision_select = "decision_select_"+counter;
+            var func_id = "func_"+counter;
+            decision_counter++;
+						$('#set_decisions').append(
+              "<tr id='"+func_id+"'>" +
+                "<td>" +
+                  "<select id='"+decision_select+"' onchange='onDecisionFuncChange(this);'>" +
+                    "<option selected='selected' value=''></option>" +
+                    "<option value='equal'>Equal</option>" +
+                    "<option value='notequal'>Not Equal</option>" +
+                    "<option value='greater'>Greater</option>" +
+                    "<option value='greaterequal'>Greater Equal</option>" +
+                    "<option value='less'>Less</option>" +
+                    "<option value='lessequal'>Less Equal</option>" +
+                    "<option value='contains'>Contains</option>" +
+                    "<option value='prefix'>Prefix</option>" +
+                    "<option value='suffix'>Suffix</option>" +
+                    "<option value='own'>Own</option>" +
+                  "</select>" +
+                "</td>" +
+                "<td>" +
+                  "<div id='"+decision_id+"'></div>" +
+                "</td>" +
+              "</tr>"
+						);
+					}
+						
+					function onClickRemove_Decision() {          
+						var decision_id = "func_"+(--decision_counter);            
+						$('#'+decision_id).remove();
+					}
+						
+					function onCreate() {
+						var resid = $('#resid_input').val();
+						
+						var message = "resid = " + resid + "\n";
+
+						for (var i=0; i<target_counter2; i++) {
+							message += "target" + (i+1) + " = " + $('#tar2_'+i).val() + "\n";
+						}
+						
+            for (var i=0; i<decision_counter; i++) {
+              var decisionfunc = $('#decision_select_'+i).val();
+              if (decisionfunc=="equal" || decisionfunc=="notequal" || decisionfunc=="greater" || decisionfunc=="greaterequal" || decisionfunc=="less" || decisionfunc=="lessequal" || decisionfunc=="contains" || decisionfunc=="prefix" || decisionfunc=="suffix") {
+                message += "targetdecision" + (i+1) + " = " + decisionfunc + ";;" + $('#value_dec_'+i).val() + "\n";
+              } else if (decisionfunc=="own") {
+                message += "targetdecision" + (i+1) + " = " + decisionfunc + ";;" + $('#value_dec_'+i).val() + ";;\n";
+              }
+            }
+            
+						if (confirm("MESSAGE:\n"+message)) {
+							sendAsyncRequest("POST", multicast_app + "/tasks", message, function(xmlhttp) {
+								updateSelect();
+							});
+						}
+					}
+					
+					function updateCreateButton() {
+						var resid = $('#resid_input').val();
+						if (!(resid=="") && target_counter2>0) {
+							$('#create_multicast').removeAttr('disabled');
+						} else {
+							$('#create_multicast').attr('disabled', 'disabled');
+						}
+					}
+				</script>
+					
+				<h3>Create New</h3>
+				<p>
+					Use this template to create a new multicast task.
+				</p>
+				<table border="2" class="input_template">
+					<tr>
+						<td>resid = </td><td><input id="resid_input" type="text" onchange="onResidChange(this);" size="10" value=""/></td>
+					</tr>
+					<tr>
+						<td>targets = </td>
+						<td>
+							<div id="targets_input">
+								<span style='margin-bottom: 20px; padding: 10px'>Add / Remove Elements:</span><br />
+								<input id="add_button2" type='button' onclick="onClickAdd_Target();" value='Add' style="margin-left: 10px"/>
+								<input id="remove_button2" type='button' onclick="onClickRemove_Target();" value='Remove' style="float: right; margin-right: 10px"/><br />
+								<div id="set_targets2"></div>
+							</div>
+						</td>
+					</tr>
+          <tr>
+            <td>targetdecisions = </td>
+            <td>
+              <div id="targetdecisions_input">
+								<table id="set_decisions"></table>
+              </div>
+            </td>
+          </tr>
+					<tr>
+						<td colspan="2"><input id="create_multicast" type="button" onclick="onCreate();" value="Create Multicast"/></td>
+					</tr>
+				</table>
+				
+				<!-- Tasks -->
+				<script>
+					function onTaskSelect(thisSelect) {
+						var task = thisSelect[thisSelect.selectedIndex].value;
+						$('#task_targets').val(sendRequest("GET", multicast_app + "/tasks/" + task + "/targets"));
+            $('#task_targetdecisions').val(sendRequest("GET", multicast_app + "/tasks/" + task + "/targetdecisions"));
+					}
+					
+					function onDeleteTask() {
+						var task = $('#task_select').val();
+						if (confirm("Delete task: " + task)) {
+							sendAsyncRequest("DELETE", multicast_app + "/tasks/" + task, "", function(xmlhttp) {
+								updateSelect();
+							});
+							
+							$('#task_targets').val("");
+              $('#task_targetdecisions').val("");
+						}
+					}
+				</script>
+				<h3>Tasks</h3>
+				<p>
+					The multicast tasks.
+				</p>
+				<div class="tasks">
+					<span>
+						<select id="task_select" onChange="onTaskSelect(this);" size="6" multiple></select>
+						<table border="2" class="input_table">
+							<tr>
+								<td>
+									<input type="button" onclick="onDeleteTask();" value="Delete Task" />
+								</td>
+								<td>
+									Delete the selected task.
+								</td>
+							</tr>
+						</table>
+					</span>
+					<table class="tasks_bottom">
+						<tr>
+							<td>Targets:</td><td><textarea id="task_targets" rows="4" cols="55" readonly="readonly"></textarea></td>
+            </tr>
+            <tr>
+              <td>Target Decisions:</td><td><textarea id="task_targetdecisions" rows="4" cols="55" readonly="readonly"></textarea></td>
+            </tr>
+					</table>
+				</div>
+			</div>
+            
+            <div id="leftnav">
+                <h4>Modules</h4>
+                <ul style="padding-top: 5px">
+					<li><a href="apps_persisting_service.html">Persisting Service</a></li>
+                    <li><a href="apps_timed_request.html">Timed Action</a></li>
+                    <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+                    <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+                    <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+                    <li><a href="apps_broadcast.html">Multicast</a></li>
+                    <li><a href="apps_control_loop.html">Control Loop</a></li>
+				</ul>
+				
+				<h4>Documentation</h4>
+                <ul style="padding-top: 5px">
+                	<li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+                </ul>
+            </div>
+            
+            <div id="footer">
+                <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+            </div>
+        </div>
+    </body> 
+</html> 

@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Modules</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>Modules</h1>
+            <p>
+               This is an interface to a collection of modules running in the App Server.
+            </p>
+            <h2>Persisting Service</h2>
+            <p>
+               The persisting service can be used to store historical data about different devices.
+               A persisting instance specifies a target resource and the persisting service collects its data and stores it in a database. <br />
+               Two data types are possible, i.e. strings and numbers.
+               Data can be retrieved from the database through a RESTful interface.
+               Time dependent data retrieval can be used for both data types.
+               Numbers also support different aggregation forms. 
+            </p>
+            <h2>Timed Request</h2>
+            <p>
+               This app can be used to create timed requests.
+               A timed request has a specific time associated to it, which defines the time it will be executed.
+               The execution time can be specified through a date or a delay.
+               POST, PUT and DELETE requests are possible.
+            </p>
+            <h2>Periodic Request</h2>
+            <p>
+               This app can be used to create periodic requests.
+               A periodic request periodically executes requests on some target device.
+               Both the period and the payload can be changed while the periodic task is running.
+               POST, PUT and DELETE requests are possible.
+            </p>
+            <h2>Push Simulation</h2>
+            <p>
+               This app can be used to make a non-observable resource observable.
+               A push simulation instance polls on the resource and offers a observable resource to register.
+               Only changed values are pushed to the observing applications.
+               </p
+            <h2>Multiple Aggregate</h2>
+            <p>
+               The multiple aggregate app can be used to aggregate values of a collection of source resources.
+               The app registers as observer on each resource.
+               When a new value arrives an aggregated value is computed.
+               Some aggregate functions are predefined in the app, others can be defined by the user.
+            </p>
+            <h2>Broadcast</h2>
+            <p>
+               This app multiplies a single request for a collection of target resources.
+               A broadcast instance is created for broadcasts, which are often used.
+               A single broadcast can be performed using a simpler mechanism where the target resources are passed with the request. 
+            </p>
+            <h2>Control Loop</h2>
+            <p>
+               The conrol loop app implements a simple parametrizable control loop.
+               The value is read from one source resource, then possibly altered to some new value, and finally sent to a target resource. For the altering mechanism a set of predefined functions are available.
+               In addition the user can choose to set a decision function which allows simple if-then-else branching for the modification.
+            </p>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_timed_request.html">Timed Action</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Action</a></li>
+               <li><a href="apps_push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>

@@ -1,0 +1,120 @@
+#control_loop_tasks
+{
+  margin-top:20px;
+  margin-bottom:20px;
+  height:auto;
+  overflow:auto;
+  padding:20px;
+  border:3px solid #000080;
+  border-radius:10px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+#control_loop_tasks select
+{
+  float:left;
+  width:250px;
+}
+
+#multiple_aggregate_tasks
+{
+  margin-top:20px;
+  margin-bottom:20px;
+  height:auto;
+  overflow:auto;
+  padding:20px;
+  border:3px solid #000080;
+  border-radius:10px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+#multiple_aggregate_tasks select
+{
+  float:left;
+  width:250px;
+}
+
+#multicast_tasks
+{
+  margin-top:20px;
+  margin-bottom:120px;
+  height:auto;
+  overflow:auto;
+  padding:20px;
+  border:3px solid #000080;
+  border-radius:10px;
+/* gradient */
+/* fallback */
+  background-color:#aaaaaa;
+/* chrome 2+, safari 4+; multiple color stops */
+  background-image:0 color-stop(0.32,rgba(142,142,142,0.6)));
+/* chrome 10+, safari 5.1+ */
+  background-image:0 rgba(142,142,142,0.6));
+/* firefox; multiple color stops */
+  background-image:0 rgba(142,142,142,0.6));
+/* ie 6+ */
+  filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea',endColorstr='#8e8e8e');
+/* ie8 + */
+  -ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr='#eaeaea', endColorstr='#8e8e8e')";
+/* ie10 */
+  background-image:0 rgba(142,142,142,0.6));
+/* opera 11.1 */
+  background-image:0 rgba(142,142,142,0.6));
+/* The "standard" */
+  background-image:linear-gradient(rgba(234,234,234,0.5), rgba(142,142,142,0.6));
+}
+
+#multicast_tasks select
+{
+  float:left;
+  width:250px;
+}
+
+.apps_bottom
+{
+  margin-top:20px;
+  padding-top:20px;
+  float:left;
+  border-top:2px dashed #000080;
+}
+
+.apps_bottom td
+{
+  padding:5px;
+}

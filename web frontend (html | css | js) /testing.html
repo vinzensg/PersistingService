@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Thermostat Visualization | Apps - Periodic Request</title>
+      <meta name="description" content="This website serves as a visualization of a smart thermostat implemented using Califronium and Actium." />
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <link href="style.css" rel="stylesheet" type="text/css" />
+      <link href="style_apps_testing.css" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css" />
+      <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css" />
+      <script type="text/javascript" src="shared.js"></script>
+      <script type="text/javascript">			
+         var config_apps = "coap://localhost:5685/apps/appconfigs";
+         var running_apps = "coap://localhost:5685/apps/running";
+         var installed_apps = "coap://localhost:5685/install";
+         
+         function isInstalled() {
+         	var installedApps = sendRequest("GET", running_apps).split("\n");
+         		for (var el in installedApps) {
+         		    if (installedApps[el]==APP_NAME)
+             	return true;
+         	}
+         	return false;
+         }
+      </script>
+      <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+      <script type="text/javascript">
+         $("document").ready(function() {
+         	
+         });
+         	
+      </script>
+   </head>
+   <body>
+      <div id="headercontainer">
+         <div id="header">
+            <div class="logo">
+               <a href="http://people.inf.ethz.ch/mkovatsc/wiki/lab:smart-hardware:thermostats/">
+               <img src="images/thermostat.png" border="0" width="166px" height="180px" />
+               </a>
+            </div>
+            <div class="banner">
+               <img src="images/smart_thermostat.png" width="717px" height="120px" />
+            </div>
+         </div>
+         <div id="topnav">
+            <div class="topnavleft">
+               <ul>
+                  <li><a id="leftmost" href="index.html">HOME</a></li>
+                  <li><a href="general.html">General</a></li>
+                  <li><a href="vacation.html">Vacation</a></li>
+                  <li><a href="day_night.html">Day-Night</a></li>
+                  <li><a href="apps.html">Apps</a></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+      <div id="textcontainer">
+         <div id="textcontent">
+            <h1>General App</h1>
+            <p>
+               Use this interface to control any app running in the Actinium App Server.
+            </p>
+            <script>
+               function onInstall() {
+               	var app_name = $('#app_name').val();
+               	sendAsyncRequest("POST", installed_apps + "/" + app_name, "name = " + app_name);
+               }
+               
+               function onUninstall() {
+               	var app_name = $('#app_name').val();
+               	sendAsyncRequest("DELETE", config_apps + "/" + app_name);
+               }
+            </script>
+            <h3>Main Control</h3>
+            <table border="2" class="nav_input_table">
+               <tr>
+                  <td>
+                     <p>
+                        App Name:
+                     </p>
+                  </td>
+                  <td>
+                     <input id="app_name" type="text" size="70" value="" />
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="install_button" type="button" name="install_Button" onClick="onInstall();" value="Install" />
+                  </td>
+                  <td>
+                     <p>
+                        Install (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="uninstall_button" type="button" name="uninstall_Button" onClick="onUninstall();" value="Uninstall" />
+                  </td>
+                  <td>
+                     <p>
+                        Uninstall (i.e. create an instance) the app inside the app server.
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <script>
+               function onSendRequest(thisSelect) {
+               	var app_name = $('#app_name').val();
+               	var target = $('#target').val();
+               	var payload = $('#payload').val();
+               	var operation = $('#operation').val();
+               	alert("Target: " + target + " - Payload: " + payload + " - Operation: " + operation);
+                                  
+                                  sendAsyncRequest(operation, running_apps + "/" + app_name + "/" + target, payload, function(xmlhttp) {
+                                      $('#response').val(xmlhttp.responseText);
+                                  });
+               }
+            </script>
+            <h3>Send Requests</h3>
+            <table border="2" class="nav_input_table">
+               <tr>
+                  <td>
+                     <p>
+                        Target: 
+                     </p>
+                  </td>
+                  <td>
+                     <input id="target" type="text" value="" />
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <p>
+                        Operation: 
+                     </p>
+                  </td>
+                  <td>
+                     <select id="operation">
+                        <option selected="selected" value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                     </select>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <p>
+                        Payload: 
+                     </p>
+                  </td>
+                  <td>
+                     <textarea id="payload" cols="50" rows="15"></textarea>
+                  </td>
+               </tr>
+               <tr>
+                  <td>
+                     <input id="send_request" type="button" name="send_request_Button" onClick="onSendRequest();" value="Send Request" />
+                  </td>
+                  <td>
+                     <p>
+                        Send the request.
+                     </p>
+                  </td>
+               </tr>
+            </table>
+            <h3>Response</h3>
+            <p>
+               The response returned after the request.
+            </p>
+            <div class="input_template">
+               <textarea id="response" rows="30" cols="80"></textarea>
+            </div>
+         </div>
+         <div id="leftnav">
+            <h4>Modules</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="apps_persisting_service.html">Persisting Service</a></li>
+               <li><a href="apps_periodic_request.html">Periodic Request</a></li>
+               <li><a href="apps_timed_request.html">Timed Request</a></li>
+               <li><a href="apps-push_simulation.html">Push Simulation</a></li>
+               <li><a href="apps_broadcast.html">Multicast</a></li>
+               <li><a href="apps_multiple_aggregate.html">Multiple Aggregate</a></li>
+               <li><a href="apps_control_loop.html">Control Loop</a></li>
+            </ul>
+            <h4>General</h4>
+            <ul>
+               <li><a href="testing.html">General App</a></li>
+            </ul>
+            <h4>Documentation</h4>
+            <ul style="padding-top: 5px">
+               <li><a href="documents/api_documentation.pdf">API Documentation</a></li>
+            </ul>
+         </div>
+         <div id="footer">
+            <p class="smalltext">Application Kernels for Smart Home Environments - Smart Thermostat (Gianluca Vinzens)</p>
+         </div>
+      </div>
+   </body>
+</html>
