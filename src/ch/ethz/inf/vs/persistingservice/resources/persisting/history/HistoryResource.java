@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich.
+0 * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without

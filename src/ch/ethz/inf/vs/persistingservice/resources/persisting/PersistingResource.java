@@ -162,6 +162,7 @@ public class PersistingResource extends LocalResource {
 		}
 		
 		runningResource.setupReferences(observingResource, historyResource);
+		observingResource.setupReferences(historyResource);
 	}
 	
 	// Requests //////////////////////////////////////////////

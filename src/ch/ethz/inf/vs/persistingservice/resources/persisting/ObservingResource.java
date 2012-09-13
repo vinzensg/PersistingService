@@ -37,16 +37,21 @@ import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
 import ch.ethz.inf.vs.californium.coap.Option;
 import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
+import ch.ethz.inf.vs.californium.coap.PUTRequest;
 import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.coap.ResponseHandler;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
+import ch.ethz.inf.vs.persistingservice.resources.persisting.history.HistoryResource;
 
 /**
  * The Class ObservingResource keeps track, whether the task observes the source or uses polling.
  */
 public class ObservingResource extends LocalResource {
-
+	
+	/** Is the source observable */
+	private boolean observable;
+	
 	/** The observing. */
 	private boolean observing;
 	
@@ -56,6 +61,11 @@ public class ObservingResource extends LocalResource {
 	/** The set. */
 	private boolean set;
 	
+	private List<Option> getOptions;
+	
+	/** History Resource */
+	private HistoryResource historyResource;
+	
 	/**
 	 * Instantiates a new observing resource and checks whether the source is observable.
 	 *
@@ -64,7 +74,7 @@ public class ObservingResource extends LocalResource {
 	 * @param device the device
 	 * @param options the options
 	 */
-	public ObservingResource(String resourceIdentifier, boolean observing, String device, List<Option> options) {
+	public ObservingResource(String resourceIdentifier, boolean observing, String device, List<Option> getOptions) {
 		super(resourceIdentifier);
 		this.observing = observing;
 		this.device = device;
@@ -74,8 +84,8 @@ public class ObservingResource extends LocalResource {
 		Request request = new GETRequest();
 		// add the observe option
 		request.setOption(new Option(0, OptionNumberRegistry.OBSERVE));
-		if (options != null)
-			request.setOptions(OptionNumberRegistry.URI_QUERY, options);
+		if (getOptions != null)
+			request.setOptions(OptionNumberRegistry.URI_QUERY, getOptions);
 		// add the check observable handler
 		request.registerResponseHandler(new CheckObservableHandler());
 		request.setURI(device);		
@@ -105,6 +115,13 @@ public class ObservingResource extends LocalResource {
 	public boolean isSet() {
 		return set;
 	}
+	
+	/**
+	 * 
+	 */
+	public void setupReferences(HistoryResource historyResource) {
+		this.historyResource = historyResource;
+	}
 
 	/**
 	 * performGET responds with the observing status.
@@ -117,6 +134,47 @@ public class ObservingResource extends LocalResource {
 		request.prettyPrint();
 		
 		request.respond(CodeRegistry.RESP_CONTENT, Boolean.toString(observing));
+	}
+	
+	/**
+	 * performPUT change observing status
+	 * 
+	 * true:	observing
+	 * false:	polling
+	 */	
+	public void performPUT(PUTRequest request) {
+		System.out.println("PUT OBSERVING: change the observing state for device " + device);
+		request.prettyPrint();
+		
+		boolean change;
+		
+		String payload = request.getPayloadString();
+		if (payload.equals("true")) {
+			change = true;
+		} else if (payload.equals("false")) {
+			change = false;
+		} else {
+			request.respond(CodeRegistry.RESP_BAD_REQUEST, "Payload has to be 'true' or 'false'");
+			return;
+		}
+				
+		if (change != observing) {
+			if (observable && change) {
+				observing = true;
+				historyResource.stopHistory(false, getOptions, false);
+				historyResource.startHistory(change, getOptions);
+				request.respond(CodeRegistry.RESP_CHANGED);
+			} else if (!observable && change) {
+				request.respond(CodeRegistry.RESP_CONTENT, "Source not observable");
+			} else {
+				observing = false;
+				historyResource.stopHistory(true, getOptions, false);
+				historyResource.startHistory(change, getOptions);
+				request.respond(CodeRegistry.RESP_CHANGED);
+			}
+		} else {
+			request.respond(CodeRegistry.RESP_CHANGED);
+		}
 	}
 	
 	/**
@@ -138,13 +196,14 @@ public class ObservingResource extends LocalResource {
 			System.out.println("OBSERVABLE CHECK: checking for observable on device " + device);
 						
 			if (response.hasOption(OptionNumberRegistry.OBSERVE)) {
+				observable = true;
 				observing = true;
 			} else {
+				observable = false;
 				observing = false;
 			}
 			set = true;
 			
-			/*
 			Request unregister = new GETRequest();
 			unregister.setURI(device);
 			
@@ -153,7 +212,6 @@ public class ObservingResource extends LocalResource {
 			} catch (IOException e) {
 				System.err.println(e.getMessage());
 			}
-			*/
 		}
 	}
 	
